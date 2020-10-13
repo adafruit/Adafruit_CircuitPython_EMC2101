@@ -134,6 +134,7 @@ _I2C_ADDR = const(0x4C)
 _TEMP_LSB = 0.125
 _FAN_RPM_DIVISOR = const(5400000)
 _REG_FAN_CONFIG=const(0x4A)
+_TEMP_FORCE = const(0x0C)
 
 def _h(val):
     return "0x{:02X}".format(val)
@@ -152,17 +153,26 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     #_tach_read = ROUnaryStruct(_TACH_LSB, "<H")
     _tach_read_lsb = ROUnaryStruct(_TACH_LSB, "<B")
     _tach_read_msb = ROUnaryStruct(_TACH_MSB, "<B")
-    _alrt_tach_mode_enable = RWBit(_REG_CONFIG, 2)
-    
+    _tach_mode_enable = RWBit(_REG_CONFIG, 2)
+
+    # temp used to override current external temp measurement
+    _ext_tmp_force = UnaryStruct(_TEMP_FORCE, "<b")
+    _fan_ext_force_lut_en = RWBit(_REG_FAN_CONFIG, 5)
+
     # speed to use when LUT is disabled in programming mode, default speed
     # uses 6 lsbits
     _fan_setting = UnaryStruct(_REG_FAN_SETTING, "<B")
-    _fan_ext_force_lut_en = RWBit(_REG_FAN_CONFIG, 5)
     _fan_lut_prog = RWBit(_REG_FAN_CONFIG, 5)
     _fan_polarity = RWBit(_REG_FAN_CONFIG, 4)
     _fan_pwm_clock_slow = RWBit(_REG_FAN_CONFIG, 3)
     _fan_pwm_clock_override = RWBit(_REG_FAN_CONFIG, 2)
     _fan_tach_mode = RWBits(2, _REG_FAN_CONFIG, 0)
+
+    _fan_lut_t1 = UnaryStruct(0x50, "<B")
+    _fan_lut_s1 = UnaryStruct(0x51, "<B")
+
+    _fan_lut_t2 = UnaryStruct(0x52, "<B")
+    _fan_lut_s2 = UnaryStruct(0x53, "<B")
     def __init__(self, i2c_bus):
         self.i2c_device = i2cdevice.I2CDevice(i2c_bus, _I2C_ADDR)
 
@@ -173,7 +183,16 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     def initialize(self):
         """Reset the controller to an initial default configuration"""
         print("initializing!")
-        self._alrt_tach_mode_enable = True
+        self._tach_mode_enable = True
+        # set lowest temp to temp on boot
+        self._fan_lut_prog = True
+        self._fan_lut_t1 = 30
+        self._fan_lut_s1 = 5
+
+        self._fan_lut_t2 = 40
+        self._fan_lut_s2 = 50
+        self._fan_lut_prog = False
+        
 
     @property
     def internal_temperature(self):
@@ -216,6 +235,7 @@ if __name__ == "__main__":
     i2c = board.I2C()
     #i2c = DebugI2C(i2c)
     emc = EMC2101(i2c)
+    emc.fan_fallback_speed = 10
     while True:
         print("Internal temp:", emc.internal_temperature)
         print("External temp", emc.external_temperature)
