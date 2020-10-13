@@ -4,35 +4,36 @@
 import board
 import busio
 import time
+from adafruit_emc2101 import EMC2101, _lsb_to_speed
 
 i2c = busio.I2C(board.SCL, board.SDA)
 
+FAN_MAX_RPM = 1700
 emc = EMC2101(i2c)
-while True:
-    print("Setting fan speed to 25%")
-    emc.manual_fan_speed = 25
-    time.sleep(2) # longer sleep to let it spin down from 100%
-    print("Fan speed", emc.fan_speed)
-    time.sleep(1)
+emc.manual_fan_speed = 50
+time.sleep(1)
+emc.set_lut(25, 25)
+emc.set_lut(30, 50)
+emc.set_lut(45, 75)
 
-    print("Setting fan speed to 50%")
-    emc.manual_fan_speed = 50
-    time.sleep(1.5)
-    print("Fan speed", emc.fan_speed)
-    time.sleep(1)
+for i in range(8):
+    print("LUT[%d] =>"%emc._lut_temp_setters[i].__get__(emc),
+    "->", _lsb_to_speed(emc._lut_speed_setters[i].__get__(emc)))
+emc.lut_enabled = True
+emc._enabled_forced_temp = True
 
-    print("Setting fan speed to 75%")
-    emc.manual_fan_speed = 75
-    time.sleep(1.5)
-    print("Fan speed", emc.fan_speed)
-    time.sleep(1)
+emc._forced_ext_temp = 26 # over 25, should be 25%
+time.sleep(3)
+percent_max = (FAN_MAX_RPM*0.25)
+print("25%% max fan speed is %f RPM:"%percent_max, "FAN SPEED:", emc.fan_speed)
 
 
-    print("Setting fan speed to 100%")
-    emc.manual_fan_speed = 100
-    time.sleep(1.5)
-    print("Fan speed", emc.fan_speed)
-    time.sleep(1)
+emc._forced_ext_temp = 31 # over 30, should be 50%
+time.sleep(3)
+percent_max = (FAN_MAX_RPM*0.50)
+print("50%% max fan speed is %f RPM:"%percent_max, "FAN SPEED:", emc.fan_speed)
 
-    print("")
-    time.sleep(0.5)
+emc._forced_ext_temp = 46 # over 30, should be 50%
+time.sleep(3)
+percent_max = (FAN_MAX_RPM*0.75)
+print("75%% max fan speed is %f RPM:"%percent_max, "FAN SPEED:", emc.fan_speed)

@@ -140,8 +140,8 @@ _FAN_CONFIG = const(0x4A)
 _TEMP_FORCE = const(0x0C)
 _LUT_HYSTERESIS = const(0x4F)
 
-FAN_MAX_SPEED = 0x3F  # 6-bit value
-
+MAX_LUT_SPEED = 0x3F  # 6-bit value
+MAX_LUT_TEMP = 0x7F # 7-bit
 
 def _h(val):
     return "0x{:02X}".format(val)
@@ -150,19 +150,94 @@ def _h(val):
 def _b(val):
     return "{:#010b}".format(val)
 
+def _speed_to_lsb(percentage):
+    return round((percentage/100.0) * MAX_LUT_SPEED)
 
-# class FanSpeedLUT:
-#   def __init__(self, emc_fan):
-#     self.emc_fan = emc_fan
+def _lsb_to_speed(lsb_speed):
+    return round((lsb_speed/MAX_LUT_SPEED) * 100.0)
+class FanSpeedLUT:
+    def __init__(self, fan_obj):
+        self.emc_fan = fan_obj
+        self.lut_values = {}
 
-#   def __get__(self, obj, objtype=None):
-#     if not isinstance(obj, int):
-#       raise IndexError
-#   def __len__(self):
-#     return len(self.lut_values)
-#   def __set__(self, obj, value):
-#     if not isinstance(obj, int):
-#     raise IndexError
+    def __getitem__(self, index):
+        print("GET ITEM[%d]"%index)
+        if not isinstance(index, int):
+            raise IndexError
+        if not index in self.lut_values:
+            raise IndexError
+    # Object Invocation: __call__
+
+    def __setitem__(self, index, value):
+        print("SET ITEM[%d] => %f"%(index, value))
+        if not isinstance(index, int):
+            raise IndexError
+        self.lut_values[index] = value
+        self._set_lut(self.lut_values)
+
+    def __repr__(self):
+        """return the official string representation of the LUT"""
+        return "FanSpeedLUT <%x>"%id(self)
+
+    def __len__(self):
+        return len(self.lut_values)
+
+    def _set_lut(self, lut_dict):
+        lut_keys = list(lut_dict.keys())
+        lut_size =len(lut_dict)
+        # Make sure we're not going to try to set more entries than we have slots
+        if lut_size > 8:
+            raise AttributeError("LUT can only contain a maximum of 8 items")
+
+        # we want to assign the lowest temperature to the lowest LUT slot, so we sort the keys/temps
+        for k in lut_keys:
+            # Verify that the value is a correct amount
+            lut_value = lut_dict[k]
+            if lut_value > 100.0 or lut_value < 0:
+                raise AttributeError("LUT values must be a fan speed from 0-100%")
+
+            # add the current temp/speed to our internal representation
+            self.lut_values[k] = lut_value
+        current_mode = self.emc_fan.lut_enabled
+        for k, v in self.lut_values.items():
+            print(k,"=>", v)
+        # Disable the lut to allow it to be updated
+        self.emc_fan.lut_enabled = False
+
+        # get and sort the new lut keys so that we can assign them in order
+        lut_keys = list(self.lut_values.keys())
+        lut_keys.sort()
+        #print("sorted:", lut_keys)
+        for idx in range(lut_size):
+            current_temp = lut_keys[idx]
+            current_speed = _speed_to_lsb(self.lut_values[current_temp])
+            self.emc_fan._lut_temp_setters[idx].__set__(self.emc_fan, current_temp)
+            self.emc_fan._lut_speed_setters[idx].__set__(self.emc_fan, current_speed)
+
+        # Set the remaining LUT entries to the default (Temp/Speed = max value)
+        for idx in range(8)[lut_size:]:
+            #print("updating lut setters:", idx)
+            self.emc_fan._lut_temp_setters[idx].__set__(self.emc_fan, MAX_LUT_TEMP)
+            self.emc_fan._lut_speed_setters[idx].__set__(self.emc_fan, MAX_LUT_SPEED)
+        self.emc_fan.lut_enabled = current_mode
+
+# TODO:
+# lut setter
+# lut force
+# lut hysteresis
+# data rate
+# _CONV_RATE = const(0x04)
+# _CONV_RATE = const(0x0A)
+# DAC output
+# pwm polarity
+# temp filter
+# high low alerts
+# min fan speed setter (max TACH counts)
+# _TACH_LIMIT_LSB = const(0x48)
+# _TACH_LIMIT_MSB = const(0x49)
+# spinup config
+# diode tuning
+# 
 class EMC2101:  # pylint: disable=too-many-instance-attributes
     """Driver for the EMC2101 Fan Controller.
         :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
@@ -179,33 +254,60 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     _tach_mode_enable = RWBit(_REG_CONFIG, 2)
 
     # temp used to override current external temp measurement
-    _ext_tmp_force = UnaryStruct(_TEMP_FORCE, "<b")
-    _fan_ext_force_lut_en = RWBit(_FAN_CONFIG, 6)
+    _forced_ext_temp = UnaryStruct(_TEMP_FORCE, "<b")
+    _enabled_forced_temp = RWBit(_FAN_CONFIG, 6)
 
     # speed to use when LUT is disabled in programming mode, default speed
     # uses 6 lsbits
     _fan_setting = UnaryStruct(_REG_FAN_SETTING, "<B")
     _fan_lut_prog = RWBit(_FAN_CONFIG, 5)
     _fan_polarity = RWBit(_FAN_CONFIG, 4)
-    _fan_pwm_clock_slow = RWBit(_FAN_CONFIG, 3)
-    _fan_pwm_clock_override = RWBit(_FAN_CONFIG, 2)
+    # _fan_pwm_clock_slow = RWBit(_FAN_CONFIG, 3)
+    # _fan_pwm_clock_override = RWBit(_FAN_CONFIG, 2)
     _fan_tach_mode = RWBits(2, _FAN_CONFIG, 0)
 
+    # seems like a pain but ¯\_(ツ)_/¯
     _fan_lut_t1 = UnaryStruct(0x50, "<B")
     _fan_lut_s1 = UnaryStruct(0x51, "<B")
 
     _fan_lut_t2 = UnaryStruct(0x52, "<B")
     _fan_lut_s2 = UnaryStruct(0x53, "<B")
 
+    _fan_lut_t3 = UnaryStruct(0x54, "<B")
+    _fan_lut_s3 = UnaryStruct(0x55, "<B")
+
+    _fan_lut_t4 = UnaryStruct(0x56, "<B")
+    _fan_lut_s4 = UnaryStruct(0x57, "<B")
+
+    _fan_lut_t5 = UnaryStruct(0x58, "<B")
+    _fan_lut_s5 = UnaryStruct(0x59, "<B")
+
+    _fan_lut_t6 = UnaryStruct(0x5A, "<B")
+    _fan_lut_s6 = UnaryStruct(0x5B, "<B")
+
+    _fan_lut_t7 = UnaryStruct(0x5C, "<B")
+    _fan_lut_s7 = UnaryStruct(0x5D, "<B")
+
+    _fan_lut_t8 = UnaryStruct(0x5E, "<B")
+    _fan_lut_s8 = UnaryStruct(0x5F, "<B")
+
     _lut_temp_hyst = UnaryStruct(_LUT_HYSTERESIS, "<B")
+
+    _lut_speed_setters = [_fan_lut_s1, _fan_lut_s2, _fan_lut_s3, _fan_lut_s4,
+        _fan_lut_s5, _fan_lut_s6, _fan_lut_s7, _fan_lut_s8]
+    _lut_temp_setters = [_fan_lut_t1, _fan_lut_t2, _fan_lut_t3, _fan_lut_t4,
+        _fan_lut_t5, _fan_lut_t6, _fan_lut_t7, _fan_lut_t8]
+
 
     def __init__(self, i2c_bus):
         self.i2c_device = i2cdevice.I2CDevice(i2c_bus, _I2C_ADDR)
 
         if not self._part_id in [0x16, 0x28] or self._mfg_id is not 0x5D:
             raise AttributeError("Cannot find a EMC2101")
-        self._lut = {}
+        # self._lut = {}
+
         self.initialize()
+        self._lut = FanSpeedLUT(self)
 
     def initialize(self):
         """Reset the controller to an initial default configuration"""
@@ -237,12 +339,13 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         val |= self._tach_read_msb << 8
         return _FAN_RPM_DIVISOR / val
 
+
     @property
     def manual_fan_speed(self):
-        """The fan speed used while the LUT is being updated and is unavailable. Value is a
-      percentage of the fan's maximum speed"""
-        raw_setting = self._fan_setting & FAN_MAX_SPEED
-        return (raw_setting / FAN_MAX_SPEED) * 100
+        """The fan speed used while the LUT is being updated and is unavailable. The speed is given as the fan's PWM duty cycle represented as a float percentage.
+        The value roughly approximates the percentage of the fan's maximum speed"""
+        raw_setting = self._fan_setting & MAX_LUT_SPEED
+        return (raw_setting / MAX_LUT_SPEED) * 100
 
     @manual_fan_speed.setter
     def manual_fan_speed(self, fan_speed):
@@ -251,7 +354,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
         # convert from a percentage to an lsb value
         percentage = fan_speed / 100.0
-        fan_speed_lsb = round(percentage * FAN_MAX_SPEED)
+        fan_speed_lsb = round(percentage * MAX_LUT_SPEED)
         lut_disabled = self._fan_lut_prog
         self._fan_lut_prog = True
         self._fan_setting = fan_speed_lsb
@@ -267,58 +370,31 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     def lut_enabled(self, enable_lut):
         self._fan_lut_prog = not enable_lut
 
+    def get_lut(self, lut_index):
+        """The Look Up Table used to determine what the fan speed should be based on the measured
+        temperature. `lut` acts similarly to a dictionary but with restrictions:
 
-if __name__ == "__main__":
-    # TODO:
-    # lut setter
-    # lut force
-    # lut hysteresis
-    # data rate
-    # _CONV_RATE = const(0x04)
-    # _CONV_RATE = const(0x0A)
-    # DAC output
-    # pwm polarity
-    # temp filter
-    # high low alerts
-    # min fan speed setter (max TACH counts)
-    # _TACH_LIMIT_LSB = const(0x48)
-    # _TACH_LIMIT_MSB = const(0x49)
-    # spinup config
-    # diode tuning
-    # 
-    import board
-    import time
-    from adafruit_debug_i2c import DebugI2C
+        * The LUT key is a temperature in celcius
+        * The LUT value is the corresponding fan speed in % of maximum RPM
+        * The LUT can only contain 8 entries. Attempting to set a ninth will
+            result in an `IndexError`
+        
+        Example:
 
-    i2c = board.I2C()
-    #i2c = DebugI2C(i2c)
-    emc = EMC2101(i2c)
-    emc.lut_enabled = False
-    while True:
-        print("Setting fan speed to 25%")
-        emc.manual_fan_speed = 25
-        time.sleep(2)
-        print("Fan speed", emc.fan_speed)
-        time.sleep(1)
+        .. code-block:: python3
 
-        print("Setting fan speed to 50%")
-        emc.manual_fan_speed = 50
-        time.sleep(1.5)
-        print("Fan speed", emc.fan_speed)
-        time.sleep(1)
+        # If the measured external temperature goes over 20 degrees C, set the fan speed to 50%
+        fan_controller.lut[20] = 50
 
-        print("Setting fan speed to 75%")
-        emc.manual_fan_speed = 75
-        time.sleep(1.5)
-        print("Fan speed", emc.fan_speed)
-        time.sleep(1)
+        # If the temperature is over 30 degrees, set the fan speed to 75%
+        fan_controller.lut[30] = 75
+        """
+        return self._lut.__getitem__(self, lut_index)
+
+    def set_lut(self, lut_temp, lut_speed):
+        print("NEW LUT:", lut_temp, "=>", lut_speed)
+        self._lut.__setitem__(lut_temp, lut_speed)
 
 
-        print("Setting fan speed to 100%")
-        emc.manual_fan_speed = 100
-        time.sleep(1.5)
-        print("Fan speed", emc.fan_speed)
-        time.sleep(1)
 
-        print("")
-        time.sleep(0.5)
+
