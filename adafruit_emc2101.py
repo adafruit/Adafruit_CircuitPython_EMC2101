@@ -157,7 +157,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     # temp used to override current external temp measurement
     _ext_tmp_force = UnaryStruct(_TEMP_FORCE, "<b")
-    _fan_ext_force_lut_en = RWBit(_REG_FAN_CONFIG, 5)
+    _fan_ext_force_lut_en = RWBit(_REG_FAN_CONFIG, 6)
 
     # speed to use when LUT is disabled in programming mode, default speed
     # uses 6 lsbits
@@ -173,6 +173,8 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     _fan_lut_t2 = UnaryStruct(0x52, "<B")
     _fan_lut_s2 = UnaryStruct(0x53, "<B")
+    
+    _lut_temp_hyst = UnaryStruct(0x4F, "<B")
     def __init__(self, i2c_bus):
         self.i2c_device = i2cdevice.I2CDevice(i2c_bus, _I2C_ADDR)
 
@@ -183,6 +185,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     def initialize(self):
         """Reset the controller to an initial default configuration"""
         print("initializing!")
+        self._lut_temp_hyst = 0
         self._tach_mode_enable = True
         # set lowest temp to temp on boot
         self._fan_lut_prog = True
@@ -217,14 +220,17 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
       val = self._tach_read_lsb
       val |= (self._tach_read_msb<<8)
       return _FAN_RPM_DIVISOR / val
+
     @property
     def fan_fallback_speed(self):
       """The fan speed used while the LUT is being updated and is unavailable"""
-      return self._fan_setting
+      return (self._fan_setting & 0b111111)
 
     @fan_fallback_speed.setter
     def fan_fallback_speed(self, fan_speed):
+      self._fan_lut_prog = True
       self._fan_setting = (fan_speed & 0b111111)
+      self._fan_lut_prog = False
 
 
 if __name__ == "__main__":
@@ -233,9 +239,14 @@ if __name__ == "__main__":
     from adafruit_debug_i2c import DebugI2C
 
     i2c = board.I2C()
-    #i2c = DebugI2C(i2c)
+    i2c = DebugI2C(i2c)
     emc = EMC2101(i2c)
+    print("Early fallback speed:")
+    print(emc.fan_fallback_speed)
     emc.fan_fallback_speed = 10
+    print("Early fallback speed after WRITE")
+    print(emc.fan_fallback_speed)
+    time.sleep(1)
     while True:
         print("Internal temp:", emc.internal_temperature)
         print("External temp", emc.external_temperature)
