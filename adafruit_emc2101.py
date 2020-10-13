@@ -161,12 +161,11 @@ class FanSpeedLUT:
         self.lut_values = {}
 
     def __getitem__(self, index):
-        print("GET ITEM[%d]"%index)
         if not isinstance(index, int):
             raise IndexError
         if not index in self.lut_values:
             raise IndexError
-    # Object Invocation: __call__
+        raise RuntimeError("not implemented")
 
     def __setitem__(self, index, value):
         print("SET ITEM[%d] => %f"%(index, value))
@@ -178,6 +177,15 @@ class FanSpeedLUT:
     def __repr__(self):
         """return the official string representation of the LUT"""
         return "FanSpeedLUT <%x>"%id(self)
+
+    def __str__(self):
+        """return the official string representation of the LUT"""
+        value_strs = []
+        for i in range(len(self.lut_values)):
+            value_str = "%d : "%self.emc_fan._lut_temp_setters[i].__get__(self.emc_fan)
+            value_str += str(_lsb_to_speed(self.emc_fan._lut_speed_setters[i].__get__(self.emc_fan)))
+            value_strs.append(value_str)
+        return "{"+", ".join(value_strs)+"}"
 
     def __len__(self):
         return len(self.lut_values)
@@ -394,6 +402,11 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     def set_lut(self, lut_temp, lut_speed):
         print("NEW LUT:", lut_temp, "=>", lut_speed)
         self._lut.__setitem__(lut_temp, lut_speed)
+    
+    @property
+    def lut(self):
+        """The dict-like representation of the LUT"""
+        return self._lut
 
 
 
