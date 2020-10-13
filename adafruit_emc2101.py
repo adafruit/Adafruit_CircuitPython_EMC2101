@@ -29,7 +29,7 @@ Implementation Notes
 import struct
 
 from micropython import const
-from adafruit_register.i2c_struct import ROUnaryStruct
+from adafruit_register.i2c_struct import ROUnaryStruct, UnaryStruct
 from adafruit_register.i2c_bit import RWBit
 from adafruit_register.i2c_bits import RWBits, ROBits
 import adafruit_bus_device.i2c_device as i2cdevice
@@ -39,6 +39,9 @@ __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 _INTERNAL_TEMP = const(0x00)
 _EXTERNAL_TEMP_MSB = const(0x01)
 _EXTERNAL_TEMP_LSB = const(0x10)
+_TACH_LSB = const(0x46)
+_TACH_MSB = const(0x47)
+_REG_FAN_SETTING =const(0x4C)
 foo = """
   # 00h	R	Internal Temperature	"Stores the Internal Temperature"	00h	Page 33																				
   # 02h	R	Status	"Reports internal, external, and TCRIT alarms"	00h	Page 33																				
@@ -123,11 +126,14 @@ foo = """
   """
 _REG_PARTID = const(0xFD)  # 0x16
 _REG_MFGID = const(0xFE)  # 0xFF16
+# _REG_CONFIG = const(0x09)
+_REG_CONFIG = const(0x03)
 # FDh	R	Product ID	ID	16h or 28h	Page 48
 # FEh	R	Manufacturer ID	SMSC	5Dh	Page 48
 _I2C_ADDR = const(0x4C)
 _TEMP_LSB = 0.125
-
+_FAN_RPM_DIVISOR = const(5400000)
+_REG_FAN_CONFIG=const(0x4A)
 
 def _h(val):
     return "0x{:02X}".format(val)
@@ -143,16 +149,31 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     _int_temp = ROUnaryStruct(_INTERNAL_TEMP, "<b")
     _ext_temp_msb = ROUnaryStruct(_INTERNAL_TEMP, "<b")
     _ext_temp_lsb = ROUnaryStruct(_INTERNAL_TEMP, "<b")
-
+    #_tach_read = ROUnaryStruct(_TACH_LSB, "<H")
+    _tach_read_lsb = ROUnaryStruct(_TACH_LSB, "<B")
+    _tach_read_msb = ROUnaryStruct(_TACH_MSB, "<B")
+    _alrt_tach_mode_enable = RWBit(_REG_CONFIG, 2)
+    
+    # speed to use when LUT is disabled in programming mode, default speed
+    # uses 6 lsbits
+    _fan_setting = UnaryStruct(_REG_FAN_SETTING, "<B")
+    _fan_ext_force_lut_en = RWBit(_REG_FAN_CONFIG, 5)
+    _fan_lut_prog = RWBit(_REG_FAN_CONFIG, 5)
+    _fan_polarity = RWBit(_REG_FAN_CONFIG, 4)
+    _fan_pwm_clock_slow = RWBit(_REG_FAN_CONFIG, 3)
+    _fan_pwm_clock_override = RWBit(_REG_FAN_CONFIG, 2)
+    _fan_tach_mode = RWBits(2, _REG_FAN_CONFIG, 0)
     def __init__(self, i2c_bus):
         self.i2c_device = i2cdevice.I2CDevice(i2c_bus, _I2C_ADDR)
 
         if not self._part_id in [0x16, 0x28] or self._mfg_id is not 0x5D:
             raise AttributeError("Cannot find a EMC2101")
+        self.initialize()
 
     def initialize(self):
         """Reset the controller to an initial default configuration"""
         print("initializing!")
+        self._alrt_tach_mode_enable = True
 
     @property
     def internal_temperature(self):
@@ -165,22 +186,41 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         temp_msb = self._ext_temp_msb
         temp_lsb = self._ext_temp_lsb
         full_tmp = (temp_msb << 8) | temp_lsb
-        print("\t\tjoined", _h(full_tmp))
         full_tmp >>= 5
-        print("\t\tshifted:", _h(full_tmp))
         full_tmp *= 0.125
-        print("\t\tscaled:", full_tmp)
 
         return full_tmp  # !!! it's RAAAAAAAAARW
+    @property
+    def fan_speed(self):
+      """The current speed in Revolutions per Minute (RPM)"""
+
+
+      val = self._tach_read_lsb
+      val |= (self._tach_read_msb<<8)
+      return _FAN_RPM_DIVISOR / val
+    @property
+    def fan_fallback_speed(self):
+      """The fan speed used while the LUT is being updated and is unavailable"""
+      return self._fan_setting
+
+    @fan_fallback_speed.setter
+    def fan_fallback_speed(self, fan_speed):
+      self._fan_setting = (fan_speed & 0b111111)
 
 
 if __name__ == "__main__":
     import board
     import time
+    from adafruit_debug_i2c import DebugI2C
 
     i2c = board.I2C()
+    #i2c = DebugI2C(i2c)
     emc = EMC2101(i2c)
     while True:
         print("Internal temp:", emc.internal_temperature)
         print("External temp", emc.external_temperature)
+        print("Fan speed", emc.fan_speed)
+        print("Fan fallback speed:", emc.fan_fallback_speed)
+
+        print("")
         time.sleep(0.5)
