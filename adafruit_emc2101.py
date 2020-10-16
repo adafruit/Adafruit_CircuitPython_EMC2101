@@ -166,6 +166,60 @@ class FanSpeedLUT:
 # spinup config
 # diode tuning
 #
+
+class CV:
+    """struct helper"""
+
+    @classmethod
+    def add_values(cls, value_tuples):
+        "creates CV entires"
+        cls.string = {}
+        cls.lsb = {}
+
+        for value_tuple in value_tuples:
+            name, value, string, lsb = value_tuple
+            setattr(cls, name, value)
+            cls.string[value] = string
+            cls.lsb[value] = lsb
+
+    @classmethod
+    def is_valid(cls, value):
+        "Returns true if the given value is a member of the CV"
+        return value in cls.string
+
+class Rate(CV):
+    """Options for ``accelerometer_data_rate`` and ``gyro_data_rate``"""
+
+
+class SpinupDrive(CV):
+    """Options for ``spinup_drive``"""
+
+
+SpinupDrive.add_values(
+    (
+        ("BYPASS", 0, "Disabled", None),
+        ("DRIVE_50", 1, "50% Duty Cycle", None),
+        ("DRIVE_75", 2, "25% Duty Cycle", None),
+        ("DRIVE_100", 3, "100% Duty Cycle", None),
+    )
+)
+class SpinupTime(CV):
+    """Options for ``spinup_time``"""
+
+
+SpinupTime.add_values(
+    (
+        ("BYPASS", 0, "Disabled", None),
+        ("SPIN_0_05_SEC", 1, "0.05 seconds", None),
+        ("SPIN_0_1_SEC", 2, "0.1 seconds", None),
+        ("SPIN_0_2_SEC", 3, "0.2 seconds", None),
+        ("SPIN_0_4_SEC", 4, "0.4 seconds", None),
+        ("SPIN_0_8_SEC", 5, "0.8 seconds", None),
+        ("SPIN_1_6_SEC", 6, "1.6 seconds", None),
+        ("SPIN_3_2_SEC", 7, "3.2 seconds", None),
+    )
+)
+
 class EMC2101:  # pylint: disable=too-many-instance-attributes
     """Driver for the EMC2101 Fan Controller.
         :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
@@ -213,11 +267,10 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     _temp_filter_cnf = RWBits(2, _TEMP_FILTER, 1)
 
-
     #fan spin-up
     _spin_drive = RWBits(2, _FAN_SPINUP, 3)
     _spin_time = RWBits(3, _FAN_SPINUP, 0)
-    _spin_tach_limit = RWBit(3, _FAN_SPINUP, 5)
+    _spin_tach_limit = RWBit(_FAN_SPINUP, 5)
 
     # seems like a pain but ¯\_(ツ)_/¯
     _fan_lut_t1 = UnaryStruct(0x50, "<B")
@@ -271,6 +324,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._fan_pwm_clock_override = True
         self._queue = True
         self._temp_filter_cnf = 3
+        self._spin_tach_limit = False
 
     @property
     def internal_temperature(self):
@@ -286,7 +340,6 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         temp_lsb = self._ext_temp_lsb
         temp_msb = self._ext_temp_msb
         full_tmp = (temp_msb << 8) | temp_lsb
-        print(_b16(full_tmp))
         full_tmp >>= 5
         full_tmp *= 0.125
 
@@ -307,15 +360,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         if fault_stat:
             print("Fault!", fault_stat, "reading ext msb (0x01):")
             ext_high = self._ext_temp_msb
-            print("ext_mdb:", _b(ext_high))
-            print("reading lsb(0x10)")
             ext_low = self._ext_temp_lsb
-            print("ext_lsb:", _b(ext_low))
-            print("full ext data:", _b16(((ext_high<<8)|ext_low)))
-        # names = ["tach", "tcrit", "fault", "ext_low", "ext_high", "eeprom", "int_high", "busy"]
-        # for i in range(8):
-        #     if (status_dat & 1<<i) >0:
-        #         print(names[i], " hit!")
 
 
     @property
@@ -382,7 +427,6 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         return self._lut.__getitem__(self, lut_index)
 
     def set_lut(self, lut_temp, lut_speed):
-        print("NEW LUT:", lut_temp, "=>", lut_speed)
         self._lut.__setitem__(lut_temp, lut_speed)
 
     @property
@@ -397,9 +441,32 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         low = self._tach_limit_lsb
         high = self._tach_limit_msb
 
-        return (high<<8)|low
+        return _FAN_RPM_DIVISOR/((high<<8)|low)
 
     @tach_limit.setter
     def tach_limit(self, new_limit):
-        self._tach_limit_lsb = new_limit &0xFF
-        self._tach_limit_msb = ((new_limit>>8) & 0xFF)
+        num = int(_FAN_RPM_DIVISOR/new_limit)
+        self._tach_limit_lsb = num & 0xFF
+        self._tach_limit_msb = ((num>>8) & 0xFF)
+
+    @property
+    def spinup_time(self):
+        """The amount of time the fan will spin at the current set drive strength. Must be a `SpinupTime`"""
+        return self._spin_time
+
+    @spinup_time.setter
+    def spinup_time(self, spin_time):
+        if not SpinupTime.is_valid(spin_time):
+            raise AttributeError("spinup_time must be a SpinupTime")
+        self._spin_time = spin_time
+
+    @property
+    def spinup_drive(self):
+        """The drive strengh of the fan on spinup in % max RPM"""
+        return self._spin_drive
+
+    @spinup_drive.setter
+    def spinup_drive(self, spin_drive):
+        if not SpinupDrive.is_valid(spin_drive):
+            raise AttributeError("spinup_drive must be a SpinupDrive")
+        self._spin_drive = spin_drive
