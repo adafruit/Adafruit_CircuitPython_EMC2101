@@ -187,10 +187,23 @@ class CV:
         "Returns true if the given value is a member of the CV"
         return value in cls.string
 
-class Rate(CV):
+class ConversionRate(CV):
     """Options for ``accelerometer_data_rate`` and ``gyro_data_rate``"""
 
-
+ConversionRate.add_values(
+    (
+        ("RATE_1_16", 0, str(1/16.0), None),
+        ("RATE_1_8", 1, str(1/8.0), None),
+        ("RATE_1_4", 2, str(1/4.0), None),
+        ("RATE_1_2", 3, str(126.0), None),
+        ("RATE_1", 4, str(1.0), None),
+        ("RATE_2", 5, str(2.0), None),
+        ("RATE_4", 6, str(4.0), None),
+        ("RATE_8", 7, str(8.0), None),
+        ("RATE_16", 8, str(16.0), None),
+        ("RATE_32", 9, str(32.0), None),
+    )
+)
 class SpinupDrive(CV):
     """Options for ``spinup_drive``"""
 
@@ -267,6 +280,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     _temp_filter_cnf = RWBits(2, _TEMP_FILTER, 1)
 
+    _conversion_rate = RWBits(4, 0x04, 0)
     #fan spin-up
     _spin_drive = RWBits(2, _FAN_SPINUP, 3)
     _spin_time = RWBits(3, _FAN_SPINUP, 0)
@@ -470,3 +484,13 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         if not SpinupDrive.is_valid(spin_drive):
             raise AttributeError("spinup_drive must be a SpinupDrive")
         self._spin_drive = spin_drive
+    @property
+    def conversion_rate(self):
+        """The rate at which temperature measurements are taken. Must be a `ConversionRate`"""
+        return self._conversion_rate
+
+    @conversion_rate.setter
+    def conversion_rate(self, rate):
+        if not ConversionRate.is_valid(rate):
+            raise AttributeError("conversion_rate must be a `ConversionRate`")
+        self._conversion_rate = rate
