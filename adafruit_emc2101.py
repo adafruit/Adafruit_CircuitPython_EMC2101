@@ -36,119 +36,41 @@ import adafruit_bus_device.i2c_device as i2cdevice
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
-foo = """
-  # 00h	R	Internal Temperature	"Stores the Internal Temperature"	00h	Page 33
-  # 02h	R	Status	"Reports internal, external, and TCRIT alarms"	00h	Page 33
-  # 03h and 09h	R/W	Configuration	"Alert Mask, STANDBY, TCRIT override, Alert Fault
-  # Queue"	00h	Page 34
-  # 04h and 0Ah	R/W	Conversion Rate	Sets conversion rate	"08h (16 / sec)"	Page 35
-
-
-  # 4Ah	R/W	FAN Configuration	"defines polarity of PWM or DAC"	20h	Page 41
-  # 46h	R	TACH Reading Low Byte	"Stores the lower 6 bits of the TACH count. and theTACH configuration bits"	FFh	Page 40
-  # 47h	R	TACH Reading High Byte	"Stores the upper 8 bits of
-  # the TACH count."	FFh	Page 40
-  # 48h	R/W	TACH Limit Low Byte	"Stores the lower 6 bits ofthe TACH Limit"	FFh	Page 40
-  # 49h	R/W	TACH Limit High Byte	"Stores the upper 8 bits ofthe TACH Limit"	FFh	Page 40
-
-  # 19h	R/W	TCRIT Temp Limit	"Fan will be set to full speedif external temp above this
-  # value"	"55h
-  # (85°C)"	Page 36
-  # 21h	R/W	TCRIT Hysteresis	"Amount of hysteresisapplied to TCRIT Temp
-  # (1LSB = 1°C)"	"0Ah
-  # (10°C)"	Page 36
-
-
-  # 4Ah	R/W	FAN Configuration	"defines polarity of PWM or
-  # DAC"	20h	Page 41
-  # 4Bh	R/W	Fan Spin-up	Sets Spin Up options	3Fh	Page 42
-  # 4Ch	R/W	Fan Setting	Sets PWM or DAC value	00h	Page 43
-  # 4Dh	R/W	PWM Frequency	"Sets the final PWM
-  # Frequency"	17h	Page 44
-  # 4Eh	R/W	PWM Frequency Divide	"Sets the base PWM
-  # frequency"	01h	Page 44
-
-  # ##### LUT
-  # 50h	"R/W (See
-  # Note 6.1)"	Lookup Table Temp Setting 1	"Look Up Table
-  # Temperature Setting 1"	7Fh	Page 46
-  # 51h	"R/W (See
-  # Note 6.1)"	Lookup Table Fan Setting 1	"Associated Fan Setting for
-  # Temp Setting 1"	3Fh	Page 46
-  # 52h	"R/W (See
-  # Note 6.1)"	Lookup Table Temp Setting 2	"Look Up Table
-  # Temperature Setting 2"	7Fh	Page 46
-  # 53h	"R/W (See
-  # Note 6.1)"	Lookup Table Fan Setting 2	"Associated Fan Setting for
-  # Temp Setting 2"	3Fh	Page 46
-  # 54h	"R/W (See
-  # Note 6.1)"	Lookup Table Temp Setting 3	"Look Up Table
-  # Temperature Setting 3"	7Fh	Page 46
-  # 55h	"R/W (See
-  # Note 6.1)"	Lookup Table Fan Setting 3	"Associated Fan Setting for
-  # Temp Setting 3"	3Fh	Page 46
-  # 56h	"R/W (See
-  # Note 6.1)"	Lookup Table Temp Setting 4	"Look Up Table
-  # Temperature Setting 4"	7Fh	Page 46
-  # 57h	"R/W (See
-  # Note 6.1)"	Lookup Table Fan Setting 4	"Associated Fan Setting for
-  # Temp Setting 4"	3Fh	Page 46
-  # 58h	"R/W (See
-  # Note 6.1)"	Lookup Table Temp Setting 5	"Look Up Table
-  # Temperature Setting 5"	7Fh	Page 46
-  # 59h	"R/W (See
-  # Note 6.1)"	Lookup Table Fan Setting 5	"Associated Fan Setting for
-  # Temp Setting 5"	3Fh	Page 46
-  # 5Ah	"R/W (See
-  # Note 6.1)"	Lookup Table Temp Setting 6	"Look Up Table
-  # Temperature Setting 6"	7Fh	Page 46
-  # 5Bh	"R/W (See
-  # Note 6.1)"	Lookup Table Fan Setting 6	"Associated Fan Setting for
-  # Temp Setting 6"	3Fh	Page 46
-  # 5Ch	"R/W (See
-  # Note 6.1)"	Lookup Table Temp Setting 7	"Look Up Table
-  # Temperature Setting 7"	7Fh	Page 46
-  # 5Dh	"R/W (See
-  # Note 6.1)"	Lookup Table Fan Setting 7	"Associated Fan Setting for
-  # Temp Setting 7"	3Fh	Page 46
-  # 5Eh	"R/W (See
-  # Note 6.1)"	Lookup Table Temp Setting 8	"Look Up Table
-  # Temperature Setting 8"	7Fh	Page 46
-  # 5Fh	"R/W (See
-  # Note 6.1)"	Lookup Table Fan Setting 8	"Associated Fan Setting for
-  # Temp Setting 8"	3Fh	Page 46
-  """
-
-# _REG_CONFIG = const(0x09)
-# FDh	R	Product ID	ID	16h or 28h	Page 48
-# FEh	R	Manufacturer ID	SMSC	5Dh	Page 48
-
 
 _INTERNAL_TEMP = const(0x00)
 _EXTERNAL_TEMP_MSB = const(0x01)
 _EXTERNAL_TEMP_LSB = const(0x10)
+
+_STATUS = const(0x02)
+_REG_CONFIG = const(0x03)
+_TEMP_FORCE = const(0x0C)
 _TACH_LSB = const(0x46)
 _TACH_MSB = const(0x47)
+_TACH_LIMIT_LSB = const(0x48)
+_TACH_LIMIT_MSB = const(0x49)
+_FAN_CONFIG = const(0x4A)
+_FAN_SPINUP = const(0x4B)
 _REG_FAN_SETTING = const(0x4C)
+_LUT_HYSTERESIS = const(0x4F)
+
+_TEMP_FILTER = const(0xBF)
 _REG_PARTID = const(0xFD)  # 0x16
 _REG_MFGID = const(0xFE)  # 0xFF16
-_REG_CONFIG = const(0x03)
-_I2C_ADDR = const(0x4C)
-_TEMP_LSB = 0.125
-_FAN_RPM_DIVISOR = const(5400000)
-_FAN_CONFIG = const(0x4A)
-_TEMP_FORCE = const(0x0C)
-_LUT_HYSTERESIS = const(0x4F)
 
 MAX_LUT_SPEED = 0x3F  # 6-bit value
 MAX_LUT_TEMP = 0x7F # 7-bit
 
+_I2C_ADDR = const(0x4C)
+_FAN_RPM_DIVISOR = const(5400000)
+_TEMP_LSB = 0.125
 def _h(val):
     return "0x{:02X}".format(val)
 
 
 def _b(val):
     return "{:#010b}".format(val)
+def _b16(val):
+    return "{:#018b}".format(val)
 
 def _speed_to_lsb(percentage):
     return round((percentage/100.0) * MAX_LUT_SPEED)
@@ -185,7 +107,7 @@ class FanSpeedLUT:
             value_str = "%d : "%self.emc_fan._lut_temp_setters[i].__get__(self.emc_fan)
             value_str += str(_lsb_to_speed(self.emc_fan._lut_speed_setters[i].__get__(self.emc_fan)))
             value_strs.append(value_str)
-        return "{"+", ".join(value_strs)+"}"
+        return "{"+", ".join(value_strs)+"}\nORRRRRR:"+str(self.lut_values)
 
     def __len__(self):
         return len(self.lut_values)
@@ -230,8 +152,6 @@ class FanSpeedLUT:
         self.emc_fan.lut_enabled = current_mode
 
 # TODO:
-# lut setter
-# lut force
 # lut hysteresis
 # data rate
 # _CONV_RATE = const(0x04)
@@ -245,7 +165,7 @@ class FanSpeedLUT:
 # _TACH_LIMIT_MSB = const(0x49)
 # spinup config
 # diode tuning
-# 
+#
 class EMC2101:  # pylint: disable=too-many-instance-attributes
     """Driver for the EMC2101 Fan Controller.
         :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
@@ -254,13 +174,17 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     _part_id = ROUnaryStruct(_REG_PARTID, "<B")
     _mfg_id = ROUnaryStruct(_REG_MFGID, "<B")
     _int_temp = ROUnaryStruct(_INTERNAL_TEMP, "<b")
-    _ext_temp_msb = ROUnaryStruct(_INTERNAL_TEMP, "<b")
-    _ext_temp_lsb = ROUnaryStruct(_INTERNAL_TEMP, "<b")
+
+    # IMPORTANT! the sign bit for the external temp is in the msbyte so mark it as signed
+    # and lsb as unsigned
+    _ext_temp_msb = ROUnaryStruct(_EXTERNAL_TEMP_MSB, "<b")
+    _ext_temp_lsb = ROUnaryStruct(_EXTERNAL_TEMP_LSB, "<B")
     # _tach_read = ROUnaryStruct(_TACH_LSB, "<H")
     _tach_read_lsb = ROUnaryStruct(_TACH_LSB, "<B")
     _tach_read_msb = ROUnaryStruct(_TACH_MSB, "<B")
     _tach_mode_enable = RWBit(_REG_CONFIG, 2)
-
+    _tach_limit_lsb = UnaryStruct(_TACH_LIMIT_LSB, "<B")
+    _tach_limit_msb = UnaryStruct(_TACH_LIMIT_MSB, "<B")
     # temp used to override current external temp measurement
     _forced_ext_temp = UnaryStruct(_TEMP_FORCE, "<b")
     _enabled_forced_temp = RWBit(_FAN_CONFIG, 6)
@@ -271,8 +195,29 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     _fan_lut_prog = RWBit(_FAN_CONFIG, 5)
     _fan_polarity = RWBit(_FAN_CONFIG, 4)
     # _fan_pwm_clock_slow = RWBit(_FAN_CONFIG, 3)
-    # _fan_pwm_clock_override = RWBit(_FAN_CONFIG, 2)
+    _fan_pwm_clock_override = RWBit(_FAN_CONFIG, 2)
     _fan_tach_mode = RWBits(2, _FAN_CONFIG, 0)
+
+    # status register: reading clears so read together
+    _status_byte= ROUnaryStruct(_STATUS, "<B")
+
+    #config register
+    _mask = RWBit(_REG_CONFIG, 7)
+    _standby = RWBit(_REG_CONFIG, 6)
+    _fan_standby = RWBit(_REG_CONFIG, 5)
+    _dac = RWBit(_REG_CONFIG, 4)
+    _dis_to = RWBit(_REG_CONFIG, 3)
+    _alt_tch = RWBit(_REG_CONFIG, 2)
+    _tcrit_ovrd = RWBit(_REG_CONFIG, 1)
+    _queue = RWBit(_REG_CONFIG, 0)
+
+    _temp_filter_cnf = RWBits(2, _TEMP_FILTER, 1)
+
+
+    #fan spin-up
+    _spin_drive = RWBits(2, _FAN_SPINUP, 3)
+    _spin_time = RWBits(3, _FAN_SPINUP, 0)
+    _spin_tach_limit = RWBit(3, _FAN_SPINUP, 5)
 
     # seems like a pain but ¯\_(ツ)_/¯
     _fan_lut_t1 = UnaryStruct(0x50, "<B")
@@ -322,18 +267,26 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         # self._lut_temp_hyst = 0
         self._tach_mode_enable = True
         self.lut_enabled = False
+        self._enabled_forced_temp = False
+        self._fan_pwm_clock_override = True
+        self._queue = True
+        self._temp_filter_cnf = 3
 
     @property
     def internal_temperature(self):
         """The temperature as measured by the EMC2101's internal 8-bit temperature sensor"""
         return self._int_temp  # !!! it's RAAAAAAAAARW)
 
+
     @property
     def external_temperature(self):
         """The temperature measured using the external diode"""
-        temp_msb = self._ext_temp_msb
+
+
         temp_lsb = self._ext_temp_lsb
+        temp_msb = self._ext_temp_msb
         full_tmp = (temp_msb << 8) | temp_lsb
+        print(_b16(full_tmp))
         full_tmp >>= 5
         full_tmp *= 0.125
 
@@ -347,6 +300,35 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         val |= self._tach_read_msb << 8
         return _FAN_RPM_DIVISOR / val
 
+    @property
+    def status(self):
+        status_dat = self._status_byte
+        fault_stat = (status_dat & 0b000000100)>0
+        if fault_stat:
+            print("Fault!", fault_stat, "reading ext msb (0x01):")
+            ext_high = self._ext_temp_msb
+            print("ext_mdb:", _b(ext_high))
+            print("reading lsb(0x10)")
+            ext_low = self._ext_temp_lsb
+            print("ext_lsb:", _b(ext_low))
+            print("full ext data:", _b16(((ext_high<<8)|ext_low)))
+        # names = ["tach", "tcrit", "fault", "ext_low", "ext_high", "eeprom", "int_high", "busy"]
+        # for i in range(8):
+        #     if (status_dat & 1<<i) >0:
+        #         print(names[i], " hit!")
+
+
+    @property
+    def config(self):
+
+        print("_mask:", self._mask)
+        print("_standby:", self._standby)
+        print("_fan_standby:", self._fan_standby)
+        print("_dac:", self._dac)
+        print("_dis_to:", self._dis_to)
+        print("_alt_tch:", self._alt_tch)
+        print("_tcrit_ovrd:", self._tcrit_ovrd)
+        print("_queue:", self._queue)
 
     @property
     def manual_fan_speed(self):
@@ -386,7 +368,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         * The LUT value is the corresponding fan speed in % of maximum RPM
         * The LUT can only contain 8 entries. Attempting to set a ninth will
             result in an `IndexError`
-        
+
         Example:
 
         .. code-block:: python3
@@ -402,12 +384,22 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     def set_lut(self, lut_temp, lut_speed):
         print("NEW LUT:", lut_temp, "=>", lut_speed)
         self._lut.__setitem__(lut_temp, lut_speed)
-    
+
     @property
     def lut(self):
         """The dict-like representation of the LUT"""
         return self._lut
 
+    @property
+    def tach_limit(self):
+        """The maximum /minimum speed expected for the fan"""
 
+        low = self._tach_limit_lsb
+        high = self._tach_limit_msb
 
+        return (high<<8)|low
 
+    @tach_limit.setter
+    def tach_limit(self, new_limit):
+        self._tach_limit_lsb = new_limit &0xFF
+        self._tach_limit_msb = ((new_limit>>8) & 0xFF)

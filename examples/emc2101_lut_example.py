@@ -17,7 +17,7 @@ emc.lut[34] = 50
 emc.lut[42] = 75
 emc.lut_enabled = True
 emc._enabled_forced_temp = True
-
+print("Lut:", emc.lut)
 emc._forced_ext_temp = 28 # over 25, should be 25%
 time.sleep(3)
 print("25%% duty cycle is %f RPM:"%emc.fan_speed)
