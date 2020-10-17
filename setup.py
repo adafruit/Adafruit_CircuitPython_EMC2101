@@ -59,5 +59,5 @@ setup(
     # simple. Or you can use find_packages().
     # TODO: IF LIBRARY FILES ARE A PACKAGE FOLDER,
     #       CHANGE `py_modules=['...']` TO `packages=['...']`
-    packages=["adafruit_emc2101"],
+    py_modules=["adafruit_emc2101"],
 )
