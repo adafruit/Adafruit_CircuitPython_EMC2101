@@ -49,6 +49,8 @@ _TACH_LIMIT_MSB = const(0x49)
 _FAN_CONFIG = const(0x4A)
 _FAN_SPINUP = const(0x4B)
 _REG_FAN_SETTING = const(0x4C)
+_PWM_FREQ = const(0x4D)
+_PWM_DIV = const(0x4E)
 _LUT_HYSTERESIS = const(0x4F)
 
 _TEMP_FILTER = const(0xBF)
@@ -308,7 +310,10 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     """When set to True, the magnitude of the fan output signal is inverted, making 0 the maximum
     value and 100 the minimum value"""
 
+    _fan_pwm_clock_select = RWBit(_FAN_CONFIG, 3)
     _fan_pwm_clock_override = RWBit(_FAN_CONFIG, 2)
+    _pwm_freq = RWBits(5, _PWM_FREQ, 0)
+    _pwm_freq_div = UnaryStruct(_PWM_DIV, "<B")
 
     dac_output_enabled = RWBit(_REG_CONFIG, 4)
     """When set, the fan control signal is output as a DC voltage instead of a PWM signal"""
@@ -357,7 +362,44 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         full_tmp >>= 5
         full_tmp *= 0.125
 
-        return full_tmp  # !!! it's RAAAAAAAAARW
+        return full_tmp
+
+    def set_pwm_clock(self, use_preset=False, use_slow=False):
+        """Select the PWM clock source. Set `use_preset` to True to select between two
+        preset clock sources. If `use_slow` is set, the 1.4kHz clock will be used, otherwise
+        use the 360kHz clock.
+
+        If `use_preset` is false, the pwm clock is set by the value of `pwm_frequency`"""
+
+        if not isinstance(use_preset, bool):
+            raise AttributeError("use_preset must be given a bool")
+        if not isinstance(use_slow, bool):
+            raise AttributeError("use_slow_pwm must be given a bool")
+
+        self._fan_pwm_clock_override = not use_preset
+        self._fan_pwm_clock_select = use_slow
+
+    @property
+    def pwm_frequency(self):
+        """Selects the base clock frequency used for the fan PWM output"""
+        return self._pwm_freq
+
+    @pwm_frequency.setter
+    def pwm_frequency(self, value):
+        if value < 0 or value > 0x1F:
+            raise AttributeError("pwm_frequency must be from 0-31")
+        self._pwm_freq_div = value
+
+    @property
+    def pwm_frequency_divisor(self):
+        """The Divisor applied to the PWM frequency to set the final frequency"""
+        return self._pwm_freq_div
+
+    @pwm_frequency_divisor.setter
+    def pwm_frequency_divisor(self, divisor):
+        if divisor < 0 or divisor > 255:
+            raise AttributeError("pwm_frequency_divisor must be from 0-255")
+        self._pwm_freq_div = divisor
 
     @property
     def fan_speed(self):
@@ -397,30 +439,6 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     @lut_enabled.setter
     def lut_enabled(self, enable_lut):
         self._fan_lut_prog = not enable_lut
-
-    # def get_lut(self, lut_index):
-    #     """The Look Up Table used to determine what the fan speed should be based on the measured
-    #     temperature. `lut` acts similarly to a dictionary but with restrictions:
-
-    #     * The LUT key is a temperature in celcius
-    #     * The LUT value is the corresponding fan speed in % of maximum RPM
-    #     * The LUT can only contain 8 entries. Attempting to set a ninth will
-    #         result in an `IndexError`
-
-    #     Example:
-
-    #     .. code-block:: python3
-
-    #     # If the measured external temperature goes over 20 degrees C, set the fan speed to 50%
-    #     fan_controller.lut[20] = 50
-
-    #     # If the temperature is over 30 degrees, set the fan speed to 75%
-    #     fan_controller.lut[30] = 75
-    #     """
-    #     return self._lut.__getitem__(self, lut_index)
-
-    # def set_lut(self, lut_temp, lut_speed):
-    #     self._lut.__setitem__(lut_temp, lut_speed)
 
     @property
     def lut(self):
