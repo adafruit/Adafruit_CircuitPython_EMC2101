@@ -350,7 +350,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     @property
     def internal_temperature(self):
         """The temperature as measured by the EMC2101's internal 8-bit temperature sensor"""
-        return self._int_temp  # !!! it's RAAAAAAAAARW)
+        return self._int_temp
 
     @property
     def external_temperature(self):
@@ -365,11 +365,22 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         return full_tmp
 
     def set_pwm_clock(self, use_preset=False, use_slow=False):
-        """Select the PWM clock source. Set `use_preset` to True to select between two
-        preset clock sources. If `use_slow` is set, the 1.4kHz clock will be used, otherwise
-        use the 360kHz clock.
+        """
+        Select the PWM clock source, chosing between two preset clocks or by configuring the
+        clock using `pwm_frequency` and `pwm_frequency_divisor`.
 
-        If `use_preset` is false, the pwm clock is set by the value of `pwm_frequency`"""
+   :param bool use_preset:
+    True: Select between two preset clock sources
+    False: The PWM clock is set by `pwm_frequency` and `pwm_frequency_divisor`
+   :param bool use_slow:
+        True: Use the 1.4kHz clock
+        False: Use the 360kHz clock.
+   :type priority: integer or None
+   :return: None
+   :raises AttributeError: if use_preset is not a `bool`
+   :raises AttributeError: if use_slow is not a `bool`
+
+        """
 
         if not isinstance(use_preset, bool):
             raise AttributeError("use_preset must be given a bool")
