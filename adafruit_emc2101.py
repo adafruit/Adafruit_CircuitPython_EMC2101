@@ -15,7 +15,7 @@ Implementation Notes
 
 **Hardware:**
 
-* `Adafruit EMC2101 Breakout <https://adafruit.com/product/47nn>`_
+* `Adafruit EMC2101 Breakout <https://adafruit.com/product/4808>`_
 
 **Software and Dependencies:**
 

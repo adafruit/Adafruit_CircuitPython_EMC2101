@@ -34,5 +34,8 @@ while True:
     print("Fan speed", emc.fan_speed)
     time.sleep(1)
 
+    print("External temperature:", emc.external_temperature, "C")
+    print("Internal temperature:", emc.internal_temperature, "C")
+
     print("")
     time.sleep(0.5)
