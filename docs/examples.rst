@@ -15,3 +15,13 @@ Use the temperature to fan speed Look Up Table to automatically control the fan 
 .. literalinclude:: ../examples/emc2101_lut_example.py
     :caption: examples/emc2101_lut_example.py
     :linenos:
+
+
+PWM Tuning
+-----------------
+
+Adjust the EMC2101s PWM settings to fit your application.
+
+.. literalinclude:: ../examples/set_pwm_freq.py
+    :caption: examples/set_pwm_freq.py
+    :linenos:
