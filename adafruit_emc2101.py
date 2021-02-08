@@ -152,7 +152,8 @@ class FanSpeedLUT:
         lut_keys.sort()
         for temp in lut_keys:
             fan_drive = self.lut_values[temp]
-            value_strs.append("%d deg C => %.1f%% duty cycle" % (temp, fan_drive))
+            value_strs.append("%d deg C => %.1f%% duty cycle" %
+                              (temp, fan_drive))
 
         return "\n".join(value_strs)
 
@@ -175,7 +176,8 @@ class FanSpeedLUT:
             # Verify that the value is a correct amount
             lut_value = lut_dict[k]
             if lut_value > 100.0 or lut_value < 0:
-                raise AttributeError("LUT values must be a fan speed from 0-100%")
+                raise AttributeError(
+                    "LUT values must be a fan speed from 0-100%")
 
             # add the current temp/speed to our internal representation
             self.lut_values[k] = lut_value
@@ -190,16 +192,20 @@ class FanSpeedLUT:
         for idx in range(lut_size):
             current_temp = lut_keys[idx]
             current_speed = _speed_to_lsb(self.lut_values[current_temp])
-            getattr(self, "_fan_lut_t%d" % (idx + 1)).__set__(self, current_temp)
-            getattr(self, "_fan_lut_s%d" % (idx + 1)).__set__(self, current_speed)
+            getattr(self, "_fan_lut_t%d" %
+                    (idx + 1)).__set__(self, current_temp)
+            getattr(self, "_fan_lut_s%d" %
+                    (idx + 1)).__set__(self, current_speed)
 
             # self.emc_fan._lut_temp_setters[idx].__set__(self.emc_fan, current_temp)
             # self.emc_fan._lut_speed_setters[idx].__set__(self.emc_fan, current_speed)
 
         # Set the remaining LUT entries to the default (Temp/Speed = max value)
         for idx in range(8)[lut_size:]:
-            getattr(self, "_fan_lut_t%d" % (idx + 1)).__set__(self, MAX_LUT_TEMP)
-            getattr(self, "_fan_lut_s%d" % (idx + 1)).__set__(self, MAX_LUT_SPEED)
+            getattr(self, "_fan_lut_t%d" %
+                    (idx + 1)).__set__(self, MAX_LUT_TEMP)
+            getattr(self, "_fan_lut_s%d" %
+                    (idx + 1)).__set__(self, MAX_LUT_SPEED)
         self.emc_fan.lut_enabled = current_mode
 
 
@@ -399,7 +405,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     def pwm_frequency(self, value):
         if value < 0 or value > 0x1F:
             raise AttributeError("pwm_frequency must be from 0-31")
-        self._pwm_freq_div = value
+        self._pwm_freq = value
 
     @property
     def pwm_frequency_divisor(self):
