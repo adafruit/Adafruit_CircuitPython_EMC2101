@@ -4,11 +4,11 @@
 import time
 import board
 import busio
-from adafruit_emc2101 import EMC2101
+from adafruit_emc2101.emc2101_lut import EMC2101_LUT
 
 i2c = busio.I2C(board.SCL, board.SDA)
 
-emc = EMC2101(i2c)
+emc = EMC2101_LUT(i2c)
 emc.set_pwm_clock(use_preset=False)
 # Datasheet recommends using the maximum value of 31 (0x1F)
 # to provide the highest effective resolution
