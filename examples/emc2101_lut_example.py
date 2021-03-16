@@ -27,6 +27,6 @@ emc.forced_ext_temp = 35  # over 30, should be 50%
 time.sleep(3)
 print("50%% duty cycle is %f RPM:" % emc.fan_speed)
 
-emc.forced_ext_temp = 43  # over 30, should be 50%
+emc.forced_ext_temp = 43  # over 42, should be 75%
 time.sleep(3)
 print("75%% duty cycle is %f RPM:" % emc.fan_speed)
