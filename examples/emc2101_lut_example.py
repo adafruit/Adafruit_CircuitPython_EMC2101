@@ -4,12 +4,12 @@
 import time
 import board
 import busio
-from adafruit_emc2101.emc2101_lut import EMC2101_LUT
+from adafruit_emc2101.emc2101_lut import EMC2101_LUT as EMC2101
 
 i2c = busio.I2C(board.SCL, board.SDA)
 
 FAN_MAX_RPM = 1700
-emc = EMC2101_LUT(i2c)
+emc = EMC2101(i2c)
 emc.manual_fan_speed = 50
 time.sleep(1)
 emc.lut[27] = 25
