@@ -232,7 +232,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     @manual_fan_speed.setter
     def manual_fan_speed(self, fan_speed):
         if fan_speed not in range(0, 101):
-            raise AttributeError("manual_fan_speed must be from 0-100 ")
+            raise AttributeError("manual_fan_speed must be from 0-100")
 
         # convert from a percentage to an lsb value
         percentage = fan_speed / 100.0
