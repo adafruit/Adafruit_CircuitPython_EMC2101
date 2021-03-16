@@ -21,9 +21,8 @@ Implementation Notes
 
 * Adafruit CircuitPython firmware for the supported boards:
   https://github.com/adafruit/circuitpython/releases
-
-# * Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
-# * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
+* Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
+* Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
 
 from micropython import const
@@ -133,8 +132,13 @@ SpinupTime.add_values(
 
 
 class EMC2101:  # pylint: disable=too-many-instance-attributes
-    """Driver for the EMC2101 Fan Controller.
+    """Basic driver for the EMC2101 Fan Controller.
+
     :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
+
+    If you need control over PWM frequency and the controller's built in temperature/speed
+    look-up table (LUT), you will need :class:`emc2101_lut.EMC2101_LUT` which extends this
+    class to add those features, at the cost of increased memory usage.
     """
 
     _part_id = ROUnaryStruct(_REG_PARTID, "<B")
@@ -238,7 +242,12 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     @property
     def lut_enabled(self):
         """Enable or disable the internal look up table used to map a given temperature
-        to a fan speed. When the LUT is disabled fan speed can be changed with `manual_fan_speed`"""
+        to a fan speed.
+
+        When the LUT is disabled (the default), fan speed can be changed with `manual_fan_speed`.
+        To actually set this to True and modify the LUT, you need to use the extended version of
+        this driver, :class:`emc2101_lut.EMC2101_LUT`
+        """
         return not self._fan_lut_prog
 
     @property

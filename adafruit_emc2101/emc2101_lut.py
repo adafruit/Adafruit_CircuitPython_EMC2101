@@ -22,10 +22,10 @@ Implementation Notes
 * Adafruit CircuitPython firmware for the supported boards:
   https://github.com/adafruit/circuitpython/releases
 
-# * Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
-# * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
+* Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
+* Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 
-The class defined here may be used instead of adafruit_emc2101.EMC2101,
+The class defined here may be used instead of :class:`adafruit_emc2101.EMC2101`,
 if your device has enough RAM to support it. This class adds LUT control
 and PWM frequency control to the base feature set.
 """
@@ -56,7 +56,13 @@ def _speed_to_lsb(percentage):
 
 class FanSpeedLUT:
     """A class used to provide a dict-like interface to the EMC2101's Temperature to Fan speed
-    Look Up Table"""
+    Look Up Table.
+
+    Keys are integer temperatures, values are fan duty cycles between 0 and 100.
+    A max of 8 values may be stored.
+
+    To remove a single stored point in the LUT, assign it as `None`.
+    """
 
     # 8 (Temperature, Speed) pairs in increasing order
     _fan_lut = StructArray(_LUT_BASE, "<B", 16)
@@ -135,7 +141,10 @@ class FanSpeedLUT:
 
 
 class EMC2101_LUT(EMC2101):  # pylint: disable=too-many-instance-attributes
-    """Driver for the EMC2101 Fan Controller.
+    """Driver for the EMC2101 Fan Controller, with PWM frequency and LUT control.
+
+    See :class:`adafruit_emc2101.EMC2101` for the base/common functionality.
+
     :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
     """
 
@@ -221,5 +230,5 @@ class EMC2101_LUT(EMC2101):  # pylint: disable=too-many-instance-attributes
 
     @property
     def lut(self):
-        """The dict-like representation of the LUT"""
+        """The dict-like representation of the LUT, actually of type :class:`FanSpeedLUT`"""
         return self._lut
