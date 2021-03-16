@@ -102,27 +102,6 @@ class FanSpeedLUT:
     _fan_lut_t8 = UnaryStruct(0x5E, "<B")
     _fan_lut_s8 = UnaryStruct(0x5F, "<B")
 
-    _lut_speed_setters = [
-        _fan_lut_s1,
-        _fan_lut_s2,
-        _fan_lut_s3,
-        _fan_lut_s4,
-        _fan_lut_s5,
-        _fan_lut_s6,
-        _fan_lut_s7,
-        _fan_lut_s8,
-    ]
-    _lut_temp_setters = [
-        _fan_lut_t1,
-        _fan_lut_t2,
-        _fan_lut_t3,
-        _fan_lut_t4,
-        _fan_lut_t5,
-        _fan_lut_t6,
-        _fan_lut_t7,
-        _fan_lut_t8,
-    ]
-
     def __init__(self, fan_obj):
         self.emc_fan = fan_obj
         self.lut_values = {}
@@ -187,19 +166,15 @@ class FanSpeedLUT:
         # get and sort the new lut keys so that we can assign them in order
         lut_keys = list(self.lut_values.keys())
         lut_keys.sort()
-        for idx in range(lut_size):
-            current_temp = lut_keys[idx]
+        for idx, current_temp in enumerate(sorted(self.lut_values.keys())):
             current_speed = _speed_to_lsb(self.lut_values[current_temp])
-            getattr(self, "_fan_lut_t%d" % (idx + 1)).__set__(self, current_temp)
-            getattr(self, "_fan_lut_s%d" % (idx + 1)).__set__(self, current_speed)
-
-            # self.emc_fan._lut_temp_setters[idx].__set__(self.emc_fan, current_temp)
-            # self.emc_fan._lut_speed_setters[idx].__set__(self.emc_fan, current_speed)
+            setattr(self, "_fan_lut_t%d" % (idx + 1), current_temp)
+            setattr(self, "_fan_lut_s%d" % (idx + 1), current_speed)
 
         # Set the remaining LUT entries to the default (Temp/Speed = max value)
-        for idx in range(8)[lut_size:]:
-            getattr(self, "_fan_lut_t%d" % (idx + 1)).__set__(self, MAX_LUT_TEMP)
-            getattr(self, "_fan_lut_s%d" % (idx + 1)).__set__(self, MAX_LUT_SPEED)
+        for idx in range(8)[len(self.lut_values) :]:
+            setattr(self, "_fan_lut_t%d" % (idx + 1), MAX_LUT_TEMP)
+            setattr(self, "_fan_lut_s%d" % (idx + 1), MAX_LUT_SPEED)
         self.emc_fan.lut_enabled = current_mode
 
 
