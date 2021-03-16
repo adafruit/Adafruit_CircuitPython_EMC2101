@@ -63,7 +63,7 @@ class CV:
 
     @classmethod
     def add_values(cls, value_tuples):
-        "creates CV entires"
+        "creates CV entries"
         cls.string = {}
         cls.lsb = {}
 
