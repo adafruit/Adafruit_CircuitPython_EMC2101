@@ -62,6 +62,7 @@ class FanSpeedLUT:
     A max of 8 values may be stored.
 
     To remove a single stored point in the LUT, assign it as `None`.
+    To clear all entries, use :meth:`FanSpeedLUT.clear`
     """
 
     # 8 (Temperature, Speed) pairs in increasing order
@@ -138,6 +139,11 @@ class FanSpeedLUT:
     def _set_lut_entry(self, idx, temp, speed):
         self._fan_lut[idx * 2] = bytearray((temp,))
         self._fan_lut[idx * 2 + 1] = bytearray((speed,))
+
+    def clear(self):
+        """Clear all LUT entries."""
+        self.lut_values = {}
+        self._update_lut()
 
 
 class EMC2101_LUT(EMC2101):  # pylint: disable=too-many-instance-attributes
@@ -232,3 +238,7 @@ class EMC2101_LUT(EMC2101):  # pylint: disable=too-many-instance-attributes
     def lut(self):
         """The dict-like representation of the LUT, actually of type :class:`FanSpeedLUT`"""
         return self._lut
+
+    def clear_lut(self):
+        """Clear all LUT entries."""
+        self._lut.clear()
