@@ -145,12 +145,15 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     _mfg_id = ROUnaryStruct(_REG_MFGID, "<B")
     _int_temp = ROUnaryStruct(_INTERNAL_TEMP, "<b")
 
+    # Some of these registers are defined as two halves because
+    # the chip does not support multi-byte reads or writes, and there
+    # is currently no way to tell Struct to do a transaction for each byte.
+
     # IMPORTANT! the sign bit for the external temp is in the msbyte so mark it as signed
     # and lsb as unsigned
     _ext_temp_msb = ROUnaryStruct(_EXTERNAL_TEMP_MSB, "<b")
     _ext_temp_lsb = ROUnaryStruct(_EXTERNAL_TEMP_LSB, "<B")
 
-    # _tach_read = ROUnaryStruct(_TACH_LSB, "<H")
     _tach_read_lsb = ROUnaryStruct(_TACH_LSB, "<B")
     _tach_read_msb = ROUnaryStruct(_TACH_MSB, "<B")
     _tach_mode_enable = RWBit(_REG_CONFIG, 2)
