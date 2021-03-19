@@ -6,3 +6,7 @@
 
 .. automodule:: adafruit_emc2101
    :members:
+
+
+.. automodule:: adafruit_emc2101.emc2101_lut
+   :members:

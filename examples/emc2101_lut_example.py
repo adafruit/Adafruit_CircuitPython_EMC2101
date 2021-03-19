@@ -4,7 +4,7 @@
 import time
 import board
 import busio
-from adafruit_emc2101 import EMC2101
+from adafruit_emc2101.emc2101_lut import EMC2101_LUT as EMC2101
 
 i2c = busio.I2C(board.SCL, board.SDA)
 
