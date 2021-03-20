@@ -8,7 +8,7 @@
 Brushless fan controller: extended functionality
 
 
-* Author(s): Bryan Siepert
+* Author(s): Bryan Siepert, Ryan Pavlik
 
 Implementation Notes
 --------------------
@@ -22,15 +22,16 @@ Implementation Notes
 * Adafruit CircuitPython firmware for the supported boards:
   https://github.com/adafruit/circuitpython/releases
 
-# * Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
-# * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
+* Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
+* Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 
-The class defined here may be used instead of adafruit_emc2101.EMC2101,
+The class defined here may be used instead of :class:`adafruit_emc2101.EMC2101`,
 if your device has enough RAM to support it. This class adds LUT control
 and PWM frequency control to the base feature set.
 """
 
 from micropython import const
+from adafruit_register.i2c_struct_array import StructArray
 from adafruit_register.i2c_struct import UnaryStruct
 from adafruit_register.i2c_bit import RWBit
 from adafruit_register.i2c_bits import RWBits
@@ -43,6 +44,7 @@ _FAN_CONFIG = const(0x4A)
 _PWM_FREQ = const(0x4D)
 _PWM_DIV = const(0x4E)
 _LUT_HYSTERESIS = const(0x4F)
+_LUT_BASE = const(0x50)
 
 MAX_LUT_SPEED = 0x3F  # 6-bit value
 MAX_LUT_TEMP = 0x7F  # 7-bit
@@ -54,32 +56,16 @@ def _speed_to_lsb(percentage):
 
 class FanSpeedLUT:
     """A class used to provide a dict-like interface to the EMC2101's Temperature to Fan speed
-    Look Up Table"""
+    Look Up Table.
 
-    # seems like a pain but ¯\_(ツ)_/¯
-    _fan_lut_t1 = UnaryStruct(0x50, "<B")
-    _fan_lut_s1 = UnaryStruct(0x51, "<B")
+    Keys are integer temperatures, values are fan duty cycles between 0 and 100.
+    A max of 8 values may be stored.
 
-    _fan_lut_t2 = UnaryStruct(0x52, "<B")
-    _fan_lut_s2 = UnaryStruct(0x53, "<B")
+    To remove a single stored point in the LUT, assign it as `None`.
+    """
 
-    _fan_lut_t3 = UnaryStruct(0x54, "<B")
-    _fan_lut_s3 = UnaryStruct(0x55, "<B")
-
-    _fan_lut_t4 = UnaryStruct(0x56, "<B")
-    _fan_lut_s4 = UnaryStruct(0x57, "<B")
-
-    _fan_lut_t5 = UnaryStruct(0x58, "<B")
-    _fan_lut_s5 = UnaryStruct(0x59, "<B")
-
-    _fan_lut_t6 = UnaryStruct(0x5A, "<B")
-    _fan_lut_s6 = UnaryStruct(0x5B, "<B")
-
-    _fan_lut_t7 = UnaryStruct(0x5C, "<B")
-    _fan_lut_s7 = UnaryStruct(0x5D, "<B")
-
-    _fan_lut_t8 = UnaryStruct(0x5E, "<B")
-    _fan_lut_s8 = UnaryStruct(0x5F, "<B")
+    # 8 (Temperature, Speed) pairs in increasing order
+    _fan_lut = StructArray(_LUT_BASE, "<B", 16)
 
     def __init__(self, fan_obj):
         self.emc_fan = fan_obj
@@ -96,9 +82,14 @@ class FanSpeedLUT:
     def __setitem__(self, index, value):
         if not isinstance(index, int):
             raise IndexError
-        if value > 100.0 or value < 0:
+        if value is None:
+            # Assign None to remove this entry
+            del self.lut_values[index]
+        elif value > 100.0 or value < 0:
+            # Range check
             raise AttributeError("LUT values must be a fan speed from 0-100%")
-        self.lut_values[index] = value
+        else:
+            self.lut_values[index] = value
         self._update_lut()
 
     def __repr__(self):
@@ -108,7 +99,7 @@ class FanSpeedLUT:
     def __str__(self):
         """return the official string representation of the LUT"""
         value_strs = []
-        lut_keys = list(sorted(self.lut_values.keys()))
+        lut_keys = tuple(sorted(self.lut_values.keys()))
         for temp in lut_keys:
             fan_drive = self.lut_values[temp]
             value_strs.append("%d deg C => %.1f%% duty cycle" % (temp, fan_drive))
@@ -137,18 +128,23 @@ class FanSpeedLUT:
         # get and sort the new lut keys so that we can assign them in order
         for idx, current_temp in enumerate(sorted(self.lut_values.keys())):
             current_speed = _speed_to_lsb(self.lut_values[current_temp])
-            setattr(self, "_fan_lut_t%d" % (idx + 1), current_temp)
-            setattr(self, "_fan_lut_s%d" % (idx + 1), current_speed)
+            self._set_lut_entry(idx, current_temp, current_speed)
 
         # Set the remaining LUT entries to the default (Temp/Speed = max value)
-        for idx in range(8)[len(self.lut_values) :]:
-            setattr(self, "_fan_lut_t%d" % (idx + 1), MAX_LUT_TEMP)
-            setattr(self, "_fan_lut_s%d" % (idx + 1), MAX_LUT_SPEED)
+        for idx in range(len(self.lut_values), 8):
+            self._set_lut_entry(idx, MAX_LUT_TEMP, MAX_LUT_SPEED)
         self.emc_fan.lut_enabled = current_mode
+
+    def _set_lut_entry(self, idx, temp, speed):
+        self._fan_lut[idx * 2] = bytearray((temp,))
+        self._fan_lut[idx * 2 + 1] = bytearray((speed,))
 
 
 class EMC2101_LUT(EMC2101):  # pylint: disable=too-many-instance-attributes
-    """Driver for the EMC2101 Fan Controller.
+    """Driver for the EMC2101 Fan Controller, with PWM frequency and LUT control.
+
+    See :class:`adafruit_emc2101.EMC2101` for the base/common functionality.
+
     :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
     """
 
@@ -234,5 +230,5 @@ class EMC2101_LUT(EMC2101):  # pylint: disable=too-many-instance-attributes
 
     @property
     def lut(self):
-        """The dict-like representation of the LUT"""
+        """The dict-like representation of the LUT, actually of type :class:`FanSpeedLUT`"""
         return self._lut

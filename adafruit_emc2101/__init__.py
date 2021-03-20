@@ -21,9 +21,8 @@ Implementation Notes
 
 * Adafruit CircuitPython firmware for the supported boards:
   https://github.com/adafruit/circuitpython/releases
-
-# * Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
-# * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
+* Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
+* Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
 
 from micropython import const
@@ -64,7 +63,7 @@ class CV:
 
     @classmethod
     def add_values(cls, value_tuples):
-        "creates CV entires"
+        "creates CV entries"
         cls.string = {}
         cls.lsb = {}
 
@@ -133,20 +132,28 @@ SpinupTime.add_values(
 
 
 class EMC2101:  # pylint: disable=too-many-instance-attributes
-    """Driver for the EMC2101 Fan Controller.
+    """Basic driver for the EMC2101 Fan Controller.
+
     :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
+
+    If you need control over PWM frequency and the controller's built in temperature/speed
+    look-up table (LUT), you will need :class:`emc2101_lut.EMC2101_LUT` which extends this
+    class to add those features, at the cost of increased memory usage.
     """
 
     _part_id = ROUnaryStruct(_REG_PARTID, "<B")
     _mfg_id = ROUnaryStruct(_REG_MFGID, "<B")
     _int_temp = ROUnaryStruct(_INTERNAL_TEMP, "<b")
 
+    # Some of these registers are defined as two halves because
+    # the chip does not support multi-byte reads or writes, and there
+    # is currently no way to tell Struct to do a transaction for each byte.
+
     # IMPORTANT! the sign bit for the external temp is in the msbyte so mark it as signed
     # and lsb as unsigned
     _ext_temp_msb = ROUnaryStruct(_EXTERNAL_TEMP_MSB, "<b")
     _ext_temp_lsb = ROUnaryStruct(_EXTERNAL_TEMP_LSB, "<B")
 
-    # _tach_read = ROUnaryStruct(_TACH_LSB, "<H")
     _tach_read_lsb = ROUnaryStruct(_TACH_LSB, "<B")
     _tach_read_msb = ROUnaryStruct(_TACH_MSB, "<B")
     _tach_mode_enable = RWBit(_REG_CONFIG, 2)
@@ -225,7 +232,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     @manual_fan_speed.setter
     def manual_fan_speed(self, fan_speed):
         if fan_speed not in range(0, 101):
-            raise AttributeError("manual_fan_speed must be from 0-100 ")
+            raise AttributeError("manual_fan_speed must be from 0-100")
 
         # convert from a percentage to an lsb value
         percentage = fan_speed / 100.0
@@ -238,7 +245,12 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     @property
     def lut_enabled(self):
         """Enable or disable the internal look up table used to map a given temperature
-        to a fan speed. When the LUT is disabled fan speed can be changed with `manual_fan_speed`"""
+        to a fan speed.
+
+        When the LUT is disabled (the default), fan speed can be changed with `manual_fan_speed`.
+        To actually set this to True and modify the LUT, you need to use the extended version of
+        this driver, :class:`emc2101_lut.EMC2101_LUT`
+        """
         return not self._fan_lut_prog
 
     @property
