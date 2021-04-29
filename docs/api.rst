@@ -6,6 +6,7 @@
 
 .. automodule:: adafruit_emc2101
    :members:
+   :exclude-members: CV
 
 
 .. automodule:: adafruit_emc2101.emc2101_lut
