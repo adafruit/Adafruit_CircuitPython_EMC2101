@@ -64,10 +64,9 @@ Usage Example
 
     import time
     import board
-    import busio
     from adafruit_emc2101 import EMC2101
 
-    i2c = busio.I2C(board.SCL, board.SDA)
+    i2c = board.I2C()  # uses board.SCL and board.SDA
 
     emc = EMC2101(i2c)
     print("Setting fan speed to 25%")

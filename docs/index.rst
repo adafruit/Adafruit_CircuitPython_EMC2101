@@ -23,10 +23,12 @@ Table of Contents
 .. toctree::
     :caption: Tutorials
 
+    EMC2101 Fan Controller and Temperature sensor Learning Guide <https://learn.adafruit.com/emc2101-fan-controller-and-temperature-sensor>
 
 .. toctree::
     :caption: Related Products
 
+    EMC2101 Fan Controller and Temperature sensor <https://www.adafruit.com/product/4808>
 
 .. toctree::
     :caption: Other Links

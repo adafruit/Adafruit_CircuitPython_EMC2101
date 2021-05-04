@@ -15,14 +15,20 @@ Implementation Notes
 
 **Hardware:**
 
-* `Adafruit EMC2101 Breakout <https://adafruit.com/product/4808>`_
+* `Adafruit EMC2101 Breakout
+  <https://adafruit.com/product/4808>`_ (Product ID: 4808)
 
 **Software and Dependencies:**
 
 * Adafruit CircuitPython firmware for the supported boards:
-  https://github.com/adafruit/circuitpython/releases
-* Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
-* Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
+  https://circuitpython.org/downloads
+
+* Adafruit's Bus Device library:
+  https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
+
+* Adafruit's Register library:
+  https://github.com/adafruit/Adafruit_CircuitPython_Register
+
 """
 
 from micropython import const
@@ -282,7 +288,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     @property
     def spinup_drive(self):
-        """The drive strengh of the fan on spinup in % max RPM"""
+        """The drive strength of the fan on spinup in % max RPM"""
         return self._spin_drive
 
     @spinup_drive.setter
