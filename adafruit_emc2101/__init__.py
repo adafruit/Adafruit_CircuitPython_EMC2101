@@ -142,6 +142,34 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
 
+
+    **Quickstart: Importing and using the device**
+
+        Here is an example of using the :class:`EMC2101` class.
+        First you will need to import the libraries to use the sensor
+
+        .. code-block:: python
+
+            import board
+            from adafruit_emc2101.emc2101_lut import EMC2101_LUT as EMC2101
+
+        Once this is done you can define your `board.I2C` object and define your sensor object
+
+        .. code-block:: python
+
+            i2c = board.I2C()  # uses board.SCL and board.SDA
+            emc = EMC2101(i2c)
+
+        Now you have access to the :attr:`manual_fan_speed` attribute to setup the
+        desired fanspeed
+
+        .. code-block:: python
+
+            emc.manual_fan_speed = 25
+
+
+
+
     If you need control over PWM frequency and the controller's built in temperature/speed
     look-up table (LUT), you will need :class:`emc2101_lut.EMC2101_LUT` which extends this
     class to add those features, at the cost of increased memory usage.
