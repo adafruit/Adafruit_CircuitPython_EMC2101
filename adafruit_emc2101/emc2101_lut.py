@@ -15,15 +15,19 @@ Implementation Notes
 
 **Hardware:**
 
-* `Adafruit EMC2101 Breakout <https://adafruit.com/product/4808>`_
+* `Adafruit EMC2101 Breakout <https://adafruit.com/product/4808>`_ (Product ID: 4808)
 
 **Software and Dependencies:**
 
 * Adafruit CircuitPython firmware for the supported boards:
-  https://github.com/adafruit/circuitpython/releases
+  https://circuitpython.org/downloads
 
-* Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
-* Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
+* Adafruit's Bus Device library:
+  https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
+
+* Adafruit's Register library:
+  https://github.com/adafruit/Adafruit_CircuitPython_Register
+
 
 The class defined here may be used instead of :class:`adafruit_emc2101.EMC2101`,
 if your device has enough RAM to support it. This class adds LUT control
