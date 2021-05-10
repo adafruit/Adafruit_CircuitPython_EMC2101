@@ -69,7 +69,7 @@ class CV:
 
     @classmethod
     def add_values(cls, value_tuples):
-        "creates CV entries"
+        """creates CV entries"""
         cls.string = {}
         cls.lsb = {}
 
@@ -94,7 +94,7 @@ ConversionRate.add_values(
         ("RATE_1_16", 0, str(1 / 16.0), None),
         ("RATE_1_8", 1, str(1 / 8.0), None),
         ("RATE_1_4", 2, str(1 / 4.0), None),
-        ("RATE_1_2", 3, str(126.0), None),
+        ("RATE_1_2", 3, str(1 / 2.0), None),
         ("RATE_1", 4, str(1.0), None),
         ("RATE_2", 5, str(2.0), None),
         ("RATE_4", 6, str(4.0), None),
