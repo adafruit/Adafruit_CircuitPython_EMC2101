@@ -158,9 +158,9 @@ class EMC2101_LUT(EMC2101):  # pylint: disable=too-many-instance-attributes
     _pwm_freq_div = UnaryStruct(_PWM_DIV, "<B")
 
     lut_temperature_hysteresis = UnaryStruct(_LUT_HYSTERESIS, "<B")
-    """The amount of hysteresis in Degrees celcius of hysteresis applied to temperature readings
+    """The amount of hysteresis in Degrees Celsius of hysteresis applied to temperature readings
     used for the LUT. As the temperature drops, the controller will switch to a lower LUT entry when
-    the measured value is belowthe lower entry's threshold, minus the hysteresis value"""
+    the measured value is below the lower entry's threshold, minus the hysteresis value"""
 
     def __init__(self, i2c_bus):
         super().__init__(i2c_bus)
@@ -176,7 +176,7 @@ class EMC2101_LUT(EMC2101):  # pylint: disable=too-many-instance-attributes
 
     def set_pwm_clock(self, use_preset=False, use_slow=False):
         """
-             Select the PWM clock source, chosing between two preset clocks or by configuring the
+             Select the PWM clock source, choosing between two preset clocks or by configuring the
              clock using `pwm_frequency` and `pwm_frequency_divisor`.
 
         :param bool use_preset:
