@@ -17,8 +17,7 @@ Introduction
     :target: https://github.com/psf/black
     :alt: Code Style: Black
 
-Brushless fan controller
-
+CircuitPython driver for EMC2101 brushless fan controller
 
 Dependencies
 =============
