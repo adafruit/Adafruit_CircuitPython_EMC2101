@@ -73,6 +73,11 @@ Usage Example
     time.sleep(2)  # longer sleep to let it spin down from 100%
     print("Fan speed", emc.fan_speed)
 
+Documentation
+=============
+
+API documentation for this library can be found on `Read the Docs <https://circuitpython.readthedocs.io/projects/emc2101/en/latest/>`_.
+
 Contributing
 ============
 
