@@ -209,9 +209,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     """When set to True, the magnitude of the fan output signal is inverted, making 0 the maximum
     value and 100 the minimum value"""
 
-    dac_output_enabled = RWBit(_REG_CONFIG, 4)
-    """When set, the fan control signal is output as a DC voltage instead of a PWM signal"""
-
+    _dac_output_enabled = RWBit(_REG_CONFIG, 4)
     _conversion_rate = RWBits(4, 0x04, 0)
     # fan spin-up
     _spin_drive = RWBits(2, _FAN_SPINUP, 3)
@@ -298,6 +296,16 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._fan_lut_prog = True
         self._fan_setting = fan_speed_lsb
         self._fan_lut_prog = lut_disabled
+
+    @property
+    def dac_output_enabled(self):
+        """When set, the fan control signal is output as a DC voltage instead of a PWM signal"""
+        return self._dac_output_enabled
+
+    @dac_output_enabled.setter
+    def dac_output_enabled(self, value):
+        self._dac_output_enabled = value
+        self._calculate_full_speed(dac=value)
 
     @property
     def lut_enabled(self):
