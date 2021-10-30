@@ -202,6 +202,7 @@ class EMC2101_LUT(EMC2101):  # pylint: disable=too-many-instance-attributes
         if value < 0 or value > 0x1F:
             raise AttributeError("pwm_frequency must be from 0-31")
         self._pwm_freq = value
+        self._calculate_full_speed(pwm_f=value)
 
     @property
     def pwm_frequency_divisor(self):

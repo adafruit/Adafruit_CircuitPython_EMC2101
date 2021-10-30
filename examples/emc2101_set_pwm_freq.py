@@ -10,7 +10,9 @@ i2c = board.I2C()  # uses board.SCL and board.SDA
 emc = EMC2101(i2c)
 emc.set_pwm_clock(use_preset=False)
 # Datasheet recommends using the maximum value of 31 (0x1F)
-# to provide the highest effective resolution
+# to provide the highest effective resolution.
+# The PWM frequency must be set before changing `manual_fan_speed` or LUT entries.
+# Otherwise the PWM duty cycle won't be configured correctly.
 emc.pwm_frequency = 14
 
 # This divides the pwm frequency down to a smaller number

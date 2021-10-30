@@ -224,6 +224,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         if not self._part_id in [0x16, 0x28] or self._mfg_id != 0x5D:
             raise AttributeError("Cannot find a EMC2101")
 
+        self._full_speed_lsb = None  # See _calculate_full_speed().
         self.initialize()
 
     def initialize(self):
@@ -231,6 +232,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._tach_mode_enable = True
         self._enabled_forced_temp = False
         self._spin_tach_limit = False
+        self._calculate_full_speed()
 
     @property
     def internal_temperature(self):
@@ -257,10 +259,26 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         val |= self._tach_read_msb << 8
         return _FAN_RPM_DIVISOR / val
 
-    # pylint: disable=no-self-use
+    def _calculate_full_speed(self, pwm_f=None, dac=None):
+        """Determine the LSB value for a 100% fan setting"""
+        if dac is None:
+            dac = self.dac_output_enabled
+
+        if dac:
+            # DAC mode is independent of PWM_F.
+            self._full_speed_lsb = float(MAX_LUT_SPEED)
+            return
+
+        # PWM mode reaches 100% duty cycle at a 2*PWM_F setting.
+        if pwm_f is None:
+            pwm_f = self._pwm_freq
+
+        # PWM_F=0 behaves like PWM_F=1.
+        self._full_speed_lsb = 2.0 * max(1, pwm_f)
+
     def _speed_to_lsb(self, percentage):
         """Convert a fan speed percentage to a Fan Setting byte value"""
-        return round((percentage / 100.0) * MAX_LUT_SPEED)
+        return round((percentage / 100.0) * self._full_speed_lsb)
 
     @property
     def manual_fan_speed(self):
@@ -268,7 +286,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         given as the fan's PWM duty cycle represented as a float percentage.
         The value roughly approximates the percentage of the fan's maximum speed"""
         raw_setting = self._fan_setting & MAX_LUT_SPEED
-        return (raw_setting / MAX_LUT_SPEED) * 100
+        return (raw_setting / self._full_speed_lsb) * 100
 
     @manual_fan_speed.setter
     def manual_fan_speed(self, fan_speed):
