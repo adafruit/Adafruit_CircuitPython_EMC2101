@@ -53,6 +53,7 @@ _TACH_LIMIT_MSB = const(0x49)
 _FAN_CONFIG = const(0x4A)
 _FAN_SPINUP = const(0x4B)
 _REG_FAN_SETTING = const(0x4C)
+_PWM_FREQ = const(0x4D)
 
 _REG_PARTID = const(0xFD)  # 0x16
 _REG_MFGID = const(0xFE)  # 0xFF16
@@ -202,6 +203,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     `forced_ext_temp`"""
 
     _fan_setting = UnaryStruct(_REG_FAN_SETTING, "<B")
+    _pwm_freq = RWBits(5, _PWM_FREQ, 0)
     _fan_lut_prog = RWBit(_FAN_CONFIG, 5)
     invert_fan_output = RWBit(_FAN_CONFIG, 4)
     """When set to True, the magnitude of the fan output signal is inverted, making 0 the maximum
@@ -255,6 +257,11 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         val |= self._tach_read_msb << 8
         return _FAN_RPM_DIVISOR / val
 
+    # pylint: disable=no-self-use
+    def _speed_to_lsb(self, percentage):
+        """Convert a fan speed percentage to a Fan Setting byte value"""
+        return round((percentage / 100.0) * MAX_LUT_SPEED)
+
     @property
     def manual_fan_speed(self):
         """The fan speed used while the LUT is being updated and is unavailable. The speed is
@@ -268,9 +275,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         if fan_speed not in range(0, 101):
             raise AttributeError("manual_fan_speed must be from 0-100")
 
-        # convert from a percentage to an lsb value
-        percentage = fan_speed / 100.0
-        fan_speed_lsb = round(percentage * MAX_LUT_SPEED)
+        fan_speed_lsb = self._speed_to_lsb(fan_speed)
         lut_disabled = self._fan_lut_prog
         self._fan_lut_prog = True
         self._fan_setting = fan_speed_lsb
