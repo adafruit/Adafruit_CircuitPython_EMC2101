@@ -38,24 +38,15 @@ from micropython import const
 from adafruit_register.i2c_struct_array import StructArray
 from adafruit_register.i2c_struct import UnaryStruct
 from adafruit_register.i2c_bit import RWBit
-from adafruit_register.i2c_bits import RWBits
-from . import EMC2101
+from . import EMC2101, MAX_LUT_SPEED, MAX_LUT_TEMP
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 
 _FAN_CONFIG = const(0x4A)
-_PWM_FREQ = const(0x4D)
 _PWM_DIV = const(0x4E)
 _LUT_HYSTERESIS = const(0x4F)
 _LUT_BASE = const(0x50)
-
-MAX_LUT_SPEED = 0x3F  # 6-bit value
-MAX_LUT_TEMP = 0x7F  # 7-bit
-
-
-def _speed_to_lsb(percentage):
-    return round((percentage / 100.0) * MAX_LUT_SPEED)
 
 
 class FanSpeedLUT:
@@ -131,7 +122,9 @@ class FanSpeedLUT:
         # we want to assign the lowest temperature to the lowest LUT slot, so we sort the keys/temps
         # get and sort the new lut keys so that we can assign them in order
         for idx, current_temp in enumerate(sorted(self.lut_values.keys())):
-            current_speed = _speed_to_lsb(self.lut_values[current_temp])
+            # We don't want to make `_speed_to_lsb()` public, it is only needed here.
+            # pylint: disable=protected-access
+            current_speed = self.emc_fan._speed_to_lsb(self.lut_values[current_temp])
             self._set_lut_entry(idx, current_temp, current_speed)
 
         # Set the remaining LUT entries to the default (Temp/Speed = max value)
@@ -154,7 +147,6 @@ class EMC2101_LUT(EMC2101):  # pylint: disable=too-many-instance-attributes
 
     _fan_pwm_clock_select = RWBit(_FAN_CONFIG, 3)
     _fan_pwm_clock_override = RWBit(_FAN_CONFIG, 2)
-    _pwm_freq = RWBits(5, _PWM_FREQ, 0)
     _pwm_freq_div = UnaryStruct(_PWM_DIV, "<B")
 
     lut_temperature_hysteresis = UnaryStruct(_LUT_HYSTERESIS, "<B")
@@ -209,7 +201,8 @@ class EMC2101_LUT(EMC2101):  # pylint: disable=too-many-instance-attributes
     def pwm_frequency(self, value):
         if value < 0 or value > 0x1F:
             raise AttributeError("pwm_frequency must be from 0-31")
-        self._pwm_freq_div = value
+        self._pwm_freq = value
+        self._calculate_full_speed(pwm_f=value)
 
     @property
     def pwm_frequency_divisor(self):

@@ -53,6 +53,7 @@ _TACH_LIMIT_MSB = const(0x49)
 _FAN_CONFIG = const(0x4A)
 _FAN_SPINUP = const(0x4B)
 _REG_FAN_SETTING = const(0x4C)
+_PWM_FREQ = const(0x4D)
 
 _REG_PARTID = const(0xFD)  # 0x16
 _REG_MFGID = const(0xFE)  # 0xFF16
@@ -202,14 +203,13 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     `forced_ext_temp`"""
 
     _fan_setting = UnaryStruct(_REG_FAN_SETTING, "<B")
+    _pwm_freq = RWBits(5, _PWM_FREQ, 0)
     _fan_lut_prog = RWBit(_FAN_CONFIG, 5)
     invert_fan_output = RWBit(_FAN_CONFIG, 4)
     """When set to True, the magnitude of the fan output signal is inverted, making 0 the maximum
     value and 100 the minimum value"""
 
-    dac_output_enabled = RWBit(_REG_CONFIG, 4)
-    """When set, the fan control signal is output as a DC voltage instead of a PWM signal"""
-
+    _dac_output_enabled = RWBit(_REG_CONFIG, 4)
     _conversion_rate = RWBits(4, 0x04, 0)
     # fan spin-up
     _spin_drive = RWBits(2, _FAN_SPINUP, 3)
@@ -222,6 +222,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         if not self._part_id in [0x16, 0x28] or self._mfg_id != 0x5D:
             raise AttributeError("Cannot find a EMC2101")
 
+        self._full_speed_lsb = None  # See _calculate_full_speed().
         self.initialize()
 
     def initialize(self):
@@ -229,6 +230,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._tach_mode_enable = True
         self._enabled_forced_temp = False
         self._spin_tach_limit = False
+        self._calculate_full_speed()
 
     @property
     def internal_temperature(self):
@@ -255,26 +257,55 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         val |= self._tach_read_msb << 8
         return _FAN_RPM_DIVISOR / val
 
+    def _calculate_full_speed(self, pwm_f=None, dac=None):
+        """Determine the LSB value for a 100% fan setting"""
+        if dac is None:
+            dac = self.dac_output_enabled
+
+        if dac:
+            # DAC mode is independent of PWM_F.
+            self._full_speed_lsb = float(MAX_LUT_SPEED)
+            return
+
+        # PWM mode reaches 100% duty cycle at a 2*PWM_F setting.
+        if pwm_f is None:
+            pwm_f = self._pwm_freq
+
+        # PWM_F=0 behaves like PWM_F=1.
+        self._full_speed_lsb = 2.0 * max(1, pwm_f)
+
+    def _speed_to_lsb(self, percentage):
+        """Convert a fan speed percentage to a Fan Setting byte value"""
+        return round((percentage / 100.0) * self._full_speed_lsb)
+
     @property
     def manual_fan_speed(self):
         """The fan speed used while the LUT is being updated and is unavailable. The speed is
         given as the fan's PWM duty cycle represented as a float percentage.
         The value roughly approximates the percentage of the fan's maximum speed"""
         raw_setting = self._fan_setting & MAX_LUT_SPEED
-        return (raw_setting / MAX_LUT_SPEED) * 100
+        return (raw_setting / self._full_speed_lsb) * 100
 
     @manual_fan_speed.setter
     def manual_fan_speed(self, fan_speed):
         if fan_speed not in range(0, 101):
             raise AttributeError("manual_fan_speed must be from 0-100")
 
-        # convert from a percentage to an lsb value
-        percentage = fan_speed / 100.0
-        fan_speed_lsb = round(percentage * MAX_LUT_SPEED)
+        fan_speed_lsb = self._speed_to_lsb(fan_speed)
         lut_disabled = self._fan_lut_prog
         self._fan_lut_prog = True
         self._fan_setting = fan_speed_lsb
         self._fan_lut_prog = lut_disabled
+
+    @property
+    def dac_output_enabled(self):
+        """When set, the fan control signal is output as a DC voltage instead of a PWM signal"""
+        return self._dac_output_enabled
+
+    @dac_output_enabled.setter
+    def dac_output_enabled(self, value):
+        self._dac_output_enabled = value
+        self._calculate_full_speed(dac=value)
 
     @property
     def lut_enabled(self):
