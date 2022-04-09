@@ -40,28 +40,54 @@ import adafruit_bus_device.i2c_device as i2cdevice
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 
-_INTERNAL_TEMP = const(0x00)
-_EXTERNAL_TEMP_MSB = const(0x01)
-_EXTERNAL_TEMP_LSB = const(0x10)
-
-_REG_CONFIG = const(0x03)
+#
+# EMC2101 Register Addresses
+#
+_INTERNAL_TEMP = const(0x00)       # Readonly
+_EXTERNAL_TEMP_MSB = const(0x01)   # Readonly, Read MSB first
+_EXTERNAL_TEMP_LSB = const(0x10)   # Readonly
+_REG_STATUS = const(0x02)          # Readonly
+_REG_CONFIG = const(0x03)          # Also at 0x09
+_CONVERT_RATE = const(0x04)        # Also at 0x0A
+_INT_TEMP_HI_LIM = const(0x05)     # Also at 0x0B
 _TEMP_FORCE = const(0x0C)
-_TACH_LSB = const(0x46)
-_TACH_MSB = const(0x47)
+_ONESHOT = const(0x0F)             # Effectively Writeonly
+_SCRATCH_1 = const(0x11)
+_SCRATCH_2 = const(0x12)
+_EXT_TEMP_LO_LIM_LSB = const(0x14)
+_EXT_TEMP_LO_LIM_MSB = const(0x08) # Also at 0x0E
+_EXT_TEMP_HI_LIM_LSB = const(0x13)
+_EXT_TEMP_HI_LIM_MSB = const(0x07) # Also at 0x0D
+_ALERT_MASK = const(0x16)
+_EXT_IDEALITY = const(0x17)
+_EXT_BETACOMP = const(0x18)
+_TCRIT_TEMP = const(0x19)
+_TCRIT_HYST = const(0x21)
+_TACH_LSB = const(0x46)            # Readonly, Read MSB first
+_TACH_MSB = const(0x47)            # Readonly
 _TACH_LIMIT_LSB = const(0x48)
 _TACH_LIMIT_MSB = const(0x49)
 _FAN_CONFIG = const(0x4A)
 _FAN_SPINUP = const(0x4B)
 _REG_FAN_SETTING = const(0x4C)
 _PWM_FREQ = const(0x4D)
-
-_REG_PARTID = const(0xFD)  # 0x16
-_REG_MFGID = const(0xFE)  # 0xFF16
+_PWM_FREQ_DIV = const(0x4E)
+_FAN_TEMP_HYST = const(0x4F)
+_AVG_FILTER = const(0xBF)
+_REG_PARTID = const(0xFD)          # Readonly, 0x16 (or 0x28 for -R part)
+_REG_MFGID = const(0xFE)           # Readonly, SMSC is 0x5D
+_REG_REV = const(0xFF)             # Readonly, e.g. 0x01
 
 MAX_LUT_SPEED = 0x3F  # 6-bit value
 MAX_LUT_TEMP = 0x7F  # 7-bit
 
+MFG_ID_SMSC = 0x5D
+PART_ID_EMC2101 = 0x16
+PART_ID_EMC2101R = 0x28
+
 _I2C_ADDR = const(0x4C)
+
+# See datasheet section 6.14:
 _FAN_RPM_DIVISOR = const(5400000)
 
 
@@ -169,49 +195,107 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
             emc.manual_fan_speed = 25
 
 
-
-
     If you need control over PWM frequency and the controller's built in temperature/speed
     look-up table (LUT), you will need :class:`emc2101_lut.EMC2101_LUT` which extends this
     class to add those features, at the cost of increased memory usage.
+
+    Datasheet: https://ww1.microchip.com/downloads/en/DeviceDoc/2101.pdf
     """
 
     _part_id = ROUnaryStruct(_REG_PARTID, "<B")
     _mfg_id = ROUnaryStruct(_REG_MFGID, "<B")
+    _part_rev = ROUnaryStruct(_REG_REV, "<B")
     _int_temp = ROUnaryStruct(_INTERNAL_TEMP, "<b")
 
-    # Some of these registers are defined as two halves because
-    # the chip does not support multi-byte reads or writes, and there
-    # is currently no way to tell Struct to do a transaction for each byte.
+    # Some of these registers are defined as two halves because the chip does
+    # not support multi-byte reads or writes, and there is currently no way to
+    # tell Struct to do a transaction for each byte.
 
-    # IMPORTANT! the sign bit for the external temp is in the msbyte so mark it as signed
-    # and lsb as unsigned
+    # IMPORTANT! 
+    # The sign bit for the external temp is in the msbyte so mark it as signed
+    #     and lsb as unsigned. 
+    # The Lsbyte is shadow-copied when Msbyte is read, so read Msbyte first to
+    #     avoid risk of bad reads. See datasheet section 6.1 Data Read Interlock.
     _ext_temp_msb = ROUnaryStruct(_EXTERNAL_TEMP_MSB, "<b")
+    # Fractions of degree (b7:0.5, b6:0.25, b5:0.125)
     _ext_temp_lsb = ROUnaryStruct(_EXTERNAL_TEMP_LSB, "<B")
 
+    # IMPORTANT! 
+    # The Msbyte is shadow-copied when Lsbyte is read, so read Lsbyte first to
+    #     avoid risk of bad reads. See datasheet section 6.1 Data Read Interlock.
     _tach_read_lsb = ROUnaryStruct(_TACH_LSB, "<B")
     _tach_read_msb = ROUnaryStruct(_TACH_MSB, "<B")
+
     _tach_mode_enable = RWBit(_REG_CONFIG, 2)
     _tach_limit_lsb = UnaryStruct(_TACH_LIMIT_LSB, "<B")
     _tach_limit_msb = UnaryStruct(_TACH_LIMIT_MSB, "<B")
-    # temp used to override current external temp measurement
-    forced_ext_temp = UnaryStruct(_TEMP_FORCE, "<b")
-    """The value that the external temperature will be forced to read when `forced_temp_enabled` is
-    set. This can be used to test the behavior of the LUT without real temperature changes"""
-    forced_temp_enabled = RWBit(_FAN_CONFIG, 6)
-    """When True, the external temperature measurement will always be read as the value in
-    `forced_ext_temp`"""
 
+    _int_temp_limit = UnaryStruct(_INT_TEMP_HI_LIM, "<B")
+    """Device internal temperature limit. If temperature is higher than this
+    the ALERT actions are taken."""
+    _tcrit_limit = UnaryStruct(_TCRIT_TEMP, "<B")
+    """Device internal critical temperature. Device part spec is 0C to 85C."""
+    _tcrit_hyst = UnaryStruct(_TCRIT_HYST, "<B")
+    """Device internal critical temperature hysteresis, default 1C"""
+
+    # Temperature in degrees:
+    _ext_temp_lo_limit_msb = RWBits(6, _EXT_TEMP_LO_LIM_LSB, 0)
+    """External temperature low-limit (integer part). If read temperature is
+    lower than this, the ALERT actions are taken."""
+    _ext_temp_hi_limit_msb = RWBits(6, _EXT_TEMP_HI_LIM_LSB, 0)
+    """External temperature low-limit (3-bit fractional part). If read 
+    temperature is lower than this, the ALERT actions are taken."""
+
+    # Limits, Fractions of degree (b7:0.5, b6:0.25, b5:0.125)
+    _ext_temp_lo_limit_lsb = RWBits(3, _EXT_TEMP_LO_LIM_LSB, 5)
+    """External temperature high-limit (integer part). If read temperature is
+    higher than this, the ALERT actions are taken."""
+    _ext_temp_hi_limit_lsb = RWBits(3, _EXT_TEMP_HI_LIM_LSB, 5)
+    """External temperature high-limit (3-bit fractional part). If read 
+    temperature is higher than this, the ALERT actions are taken."""
+
+    # Temperature used to override current external temp measurement.
+    # Force Temp is 7-bit + sign (one's complement?)
+    forced_ext_temp = UnaryStruct(_TEMP_FORCE, "<b")
+    """The value that the external temperature will be forced to read when
+    `forced_temp_enabled` is set. This can be used to test the behavior of
+    the LUT without real temperature changes."""
+    forced_temp_enabled = RWBit(_FAN_CONFIG, 6)
+    """When True, the external temperature measurement will always be read
+    as the value in `forced_ext_temp`. Not applicable if LUT disabled."""
+
+    _ext_ideality = RWBits(5, _EXT_IDEALITY, 0)
+    """Factor setting the ideality factor applied to the external diode,
+    based around a standard factor of 1.008. See table in datasheet for
+    details"""
+    _ext_betacomp = RWBits(5, _EXT_BETACOMP, 0)
+    """Beta compensation setting. When using diode-connected transistor,
+    disable with value of 0x7. Otherwise, bit 3 enables autodetection."""
+
+    # PWM/Fan control
     _fan_setting = UnaryStruct(_REG_FAN_SETTING, "<B")
     _pwm_freq = RWBits(5, _PWM_FREQ, 0)
+    _pwm_freq_div = UnaryStruct(_PWM_FREQ_DIV, "<B")
     _fan_lut_prog = RWBit(_FAN_CONFIG, 5)
+    """Programming-enable (write-enable) bit for the LUT registers."""
+    _fan_clk_sel = RWBit(_FAN_CONFIG, 3)
+    """Select base clock used to determine pwm frequency, default 0 is 360KHz,
+    and 1 is 1.4KHz."""
+    _fan_clk_ovr = RWBit(_FAN_CONFIG, 2)
+    """Enable override of clk_sel to use pwm_freq_div register to determine
+    the pwm frequency."""
     invert_fan_output = RWBit(_FAN_CONFIG, 4)
-    """When set to True, the magnitude of the fan output signal is inverted, making 0 the maximum
-    value and 100 the minimum value"""
+    """When set to True, the magnitude of the fan output signal is inverted,
+    making 0 the maximum value and 100 the minimum value."""
+    _fan_temp_hyst = RWBits(5, _FAN_TEMP_HYST, 0)
+    """The amount of hysteresis applied to temp input to the look up table."""
 
     _dac_output_enabled = RWBit(_REG_CONFIG, 4)
-    _conversion_rate = RWBits(4, 0x04, 0)
-    # fan spin-up
+    _conversion_rate = RWBits(4, _CONVERT_RATE, 0)
+    _avg_filter = RWBits(2, _AVG_FILTER, 1)
+    _alert_comp = RWBit(_AVG_FILTER, 0)
+
+    # Fan spin-up
     _spin_drive = RWBits(2, _FAN_SPINUP, 3)
     _spin_time = RWBits(3, _FAN_SPINUP, 0)
     _spin_tach_limit = RWBit(_FAN_SPINUP, 5)
@@ -219,7 +303,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     def __init__(self, i2c_bus):
         self.i2c_device = i2cdevice.I2CDevice(i2c_bus, _I2C_ADDR)
 
-        if not self._part_id in [0x16, 0x28] or self._mfg_id != 0x5D:
+        if not self._part_id in [PART_ID_EMC2101, PART_ID_EMC2101R] or self._mfg_id != MFG_ID_SMSC:
             raise AttributeError("Cannot find a EMC2101")
 
         self._full_speed_lsb = None  # See _calculate_full_speed().
@@ -231,6 +315,11 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._enabled_forced_temp = False
         self._spin_tach_limit = False
         self._calculate_full_speed()
+
+    @property
+    def part_info(self):
+        """The part information: manufacturer, part id and revision. Normally (0x5d, 0x16, 0x1)"""
+        return (self._mfg_id, self._part_id, self._part_rev)
 
     @property
     def internal_temperature(self):
@@ -255,7 +344,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
         val = self._tach_read_lsb
         val |= self._tach_read_msb << 8
-        return _FAN_RPM_DIVISOR / val
+        return round(_FAN_RPM_DIVISOR / val, 2)
 
     def _calculate_full_speed(self, pwm_f=None, dac=None):
         """Determine the LSB value for a 100% fan setting"""
