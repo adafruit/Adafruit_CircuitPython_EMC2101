@@ -73,6 +73,13 @@ Usage Example
     time.sleep(2)  # longer sleep to let it spin down from 100%
     print("Fan speed", emc.fan_speed)
 
+Additional examples, including the use of the temperature look up table (LUT)
+can be found in the examples/ folder:
+
+* emc2101_lut_example.py
+* emc2101_set_pwm_freq.py
+* emc2101_simpletest.py
+
 Documentation
 =============
 
