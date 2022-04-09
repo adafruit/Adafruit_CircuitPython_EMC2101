@@ -211,16 +211,16 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     # not support multi-byte reads or writes, and there is currently no way to
     # tell Struct to do a transaction for each byte.
 
-    # IMPORTANT! 
+    # IMPORTANT!
     # The sign bit for the external temp is in the msbyte so mark it as signed
-    #     and lsb as unsigned. 
+    #     and lsb as unsigned.
     # The Lsbyte is shadow-copied when Msbyte is read, so read Msbyte first to
     #     avoid risk of bad reads. See datasheet section 6.1 Data Read Interlock.
     _ext_temp_msb = ROUnaryStruct(_EXTERNAL_TEMP_MSB, "<b")
     # Fractions of degree (b7:0.5, b6:0.25, b5:0.125)
     _ext_temp_lsb = ROUnaryStruct(_EXTERNAL_TEMP_LSB, "<B")
 
-    # IMPORTANT! 
+    # IMPORTANT!
     # The Msbyte is shadow-copied when Lsbyte is read, so read Lsbyte first to
     #     avoid risk of bad reads. See datasheet section 6.1 Data Read Interlock.
     _tach_read_lsb = ROUnaryStruct(_TACH_LSB, "<B")
@@ -243,7 +243,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     """External temperature low-limit (integer part). If read temperature is
     lower than this, the ALERT actions are taken."""
     _ext_temp_hi_limit_msb = RWBits(6, _EXT_TEMP_HI_LIM_LSB, 0)
-    """External temperature low-limit (3-bit fractional part). If read 
+    """External temperature low-limit (3-bit fractional part). If read
     temperature is lower than this, the ALERT actions are taken."""
 
     # Limits, Fractions of degree (b7:0.5, b6:0.25, b5:0.125)
@@ -251,7 +251,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     """External temperature high-limit (integer part). If read temperature is
     higher than this, the ALERT actions are taken."""
     _ext_temp_hi_limit_lsb = RWBits(3, _EXT_TEMP_HI_LIM_LSB, 5)
-    """External temperature high-limit (3-bit fractional part). If read 
+    """External temperature high-limit (3-bit fractional part). If read
     temperature is higher than this, the ALERT actions are taken."""
 
     # Temperature used to override current external temp measurement.
