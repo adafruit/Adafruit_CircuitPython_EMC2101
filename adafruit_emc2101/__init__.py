@@ -43,28 +43,28 @@ __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 #
 # EMC2101 Register Addresses
 #
-_INTERNAL_TEMP = const(0x00)       # Readonly
-_EXTERNAL_TEMP_MSB = const(0x01)   # Readonly, Read MSB first
-_EXTERNAL_TEMP_LSB = const(0x10)   # Readonly
-_REG_STATUS = const(0x02)          # Readonly
-_REG_CONFIG = const(0x03)          # Also at 0x09
-_CONVERT_RATE = const(0x04)        # Also at 0x0A
-_INT_TEMP_HI_LIM = const(0x05)     # Also at 0x0B
+_INTERNAL_TEMP = const(0x00)  # Readonly
+_EXTERNAL_TEMP_MSB = const(0x01)  # Readonly, Read MSB first
+_EXTERNAL_TEMP_LSB = const(0x10)  # Readonly
+_REG_STATUS = const(0x02)  # Readonly
+_REG_CONFIG = const(0x03)  # Also at 0x09
+_CONVERT_RATE = const(0x04)  # Also at 0x0A
+_INT_TEMP_HI_LIM = const(0x05)  # Also at 0x0B
 _TEMP_FORCE = const(0x0C)
-_ONESHOT = const(0x0F)             # Effectively Writeonly
+_ONESHOT = const(0x0F)  # Effectively Writeonly
 _SCRATCH_1 = const(0x11)
 _SCRATCH_2 = const(0x12)
 _EXT_TEMP_LO_LIM_LSB = const(0x14)
-_EXT_TEMP_LO_LIM_MSB = const(0x08) # Also at 0x0E
+_EXT_TEMP_LO_LIM_MSB = const(0x08)  # Also at 0x0E
 _EXT_TEMP_HI_LIM_LSB = const(0x13)
-_EXT_TEMP_HI_LIM_MSB = const(0x07) # Also at 0x0D
+_EXT_TEMP_HI_LIM_MSB = const(0x07)  # Also at 0x0D
 _ALERT_MASK = const(0x16)
 _EXT_IDEALITY = const(0x17)
 _EXT_BETACOMP = const(0x18)
 _TCRIT_TEMP = const(0x19)
 _TCRIT_HYST = const(0x21)
-_TACH_LSB = const(0x46)            # Readonly, Read MSB first
-_TACH_MSB = const(0x47)            # Readonly
+_TACH_LSB = const(0x46)  # Readonly, Read MSB first
+_TACH_MSB = const(0x47)  # Readonly
 _TACH_LIMIT_LSB = const(0x48)
 _TACH_LIMIT_MSB = const(0x49)
 _FAN_CONFIG = const(0x4A)
@@ -74,9 +74,9 @@ _PWM_FREQ = const(0x4D)
 _PWM_FREQ_DIV = const(0x4E)
 _FAN_TEMP_HYST = const(0x4F)
 _AVG_FILTER = const(0xBF)
-_REG_PARTID = const(0xFD)          # Readonly, 0x16 (or 0x28 for -R part)
-_REG_MFGID = const(0xFE)           # Readonly, SMSC is 0x5D
-_REG_REV = const(0xFF)             # Readonly, e.g. 0x01
+_REG_PARTID = const(0xFD)  # Readonly, 0x16 (or 0x28 for -R part)
+_REG_MFGID = const(0xFE)  # Readonly, SMSC is 0x5D
+_REG_REV = const(0xFF)  # Readonly, e.g. 0x01
 
 MAX_LUT_SPEED = 0x3F  # 6-bit value
 MAX_LUT_TEMP = 0x7F  # 7-bit
@@ -303,7 +303,10 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     def __init__(self, i2c_bus):
         self.i2c_device = i2cdevice.I2CDevice(i2c_bus, _I2C_ADDR)
 
-        if not self._part_id in [PART_ID_EMC2101, PART_ID_EMC2101R] or self._mfg_id != MFG_ID_SMSC:
+        if (
+            not self._part_id in [PART_ID_EMC2101, PART_ID_EMC2101R]
+            or self._mfg_id != MFG_ID_SMSC
+        ):
             raise AttributeError("Cannot find a EMC2101")
 
         self._full_speed_lsb = None  # See _calculate_full_speed().
