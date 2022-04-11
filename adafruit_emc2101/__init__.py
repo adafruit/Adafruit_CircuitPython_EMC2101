@@ -87,7 +87,7 @@ class CV:
 
 
 class ConversionRate(CV):
-    """Options for ``accelerometer_data_rate`` and ``gyro_data_rate``"""
+    """Options for ``conversion_rate``"""
 
 
 ConversionRate.add_values(
