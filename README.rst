@@ -2,7 +2,7 @@ Introduction
 ============
 
 .. image:: https://readthedocs.org/projects/adafruit-circuitpython-emc2101/badge/?version=latest
-    :target: https://docs.circuitpython.org/projects/emc2101/en/latest/
+    :target: https://docs.circuitpython.org/projects/adafruit-circuitpython-emc2101/en/latest/
     :alt: Documentation Status
 
 .. image:: https://img.shields.io/discord/327254708534116352.svg
