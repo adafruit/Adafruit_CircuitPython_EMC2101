@@ -1,7 +1,7 @@
 Introduction
 ============
 
-.. image:: https://readthedocs.org/projects/adafruit-circuitpython-emc2101/badge/?version=latest
+.. image:: https://readthedocs.org/projects/emc2101/badge/?version=latest
     :target: https://docs.circuitpython.org/projects/emc2101/en/latest/
     :alt: Documentation Status
 
