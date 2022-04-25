@@ -85,6 +85,7 @@ class FanSpeedLUT:
 
     def __repr__(self):
         """return the official string representation of the LUT"""
+        # pylint: disable=consider-using-f-string
         return "FanSpeedLUT <%x>" % id(self)
 
     def __str__(self):
@@ -93,6 +94,7 @@ class FanSpeedLUT:
         lut_keys = tuple(sorted(self.lut_values.keys()))
         for temp in lut_keys:
             fan_drive = self.lut_values[temp]
+            # pylint: disable=consider-using-f-string
             value_strs.append("%d deg C => %.1f%% duty cycle" % (temp, fan_drive))
 
         return "\n".join(value_strs)
