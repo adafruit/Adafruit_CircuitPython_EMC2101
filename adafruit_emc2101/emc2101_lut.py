@@ -106,7 +106,6 @@ class FanSpeedLUT:
         values = {}
         for temp in lut_keys:
             fan_drive = self.lut_values[temp]
-            # pylint: disable=consider-using-f-string
             values[temp] = fan_drive
         return values
 
