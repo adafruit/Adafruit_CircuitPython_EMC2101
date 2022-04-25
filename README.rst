@@ -73,12 +73,39 @@ Usage Example
     time.sleep(2)  # longer sleep to let it spin down from 100%
     print("Fan speed", emc.fan_speed)
 
-Additional examples, including the use of the temperature look up table (LUT)
-can be found in the examples/ folder:
+Additional examples, including the use of the temperature look up table
+(LUT) can be found in the examples/ folder:
 
 * emc2101_lut_example.py
 * emc2101_set_pwm_freq.py
 * emc2101_simpletest.py
+
+For access to some additional properties, but without configuring the LUT,
+use the intermediate class EMC2101_EXT:
+
+.. code-block:: python3
+
+    import time
+    import board
+    from adafruit_emc2101 import EMC2101_EXT
+
+    i2c = board.I2C()  # uses board.SCL and board.SDA
+
+    emc = EMC2101_EXT(i2c)
+    print("External limit temp is", emc.external_temp_high_limit)
+    print("Setting external limit temp to 50C")
+    emc.external_temp_high_limit = 50
+
+When the temperature limits are exceeded the device sets the alert bit
+in the status register and (if configured to do so) will raise the ALERT
+output pin as an interrupt.
+
+EMC2101_EXT defines properties for internal and external temperature
+limits, and has register definitions for all registers except the LUT
+itself. The EMC2101_LUT class includes this as well.
+
+The EMC2101_Regs class is intended for internal use, and defines register
+addresses.
 
 Documentation
 =============
