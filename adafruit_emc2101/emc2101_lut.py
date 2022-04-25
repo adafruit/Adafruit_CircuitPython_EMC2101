@@ -34,20 +34,15 @@ if your device has enough RAM to support it. This class adds LUT control
 and PWM frequency control to the base feature set.
 """
 
-from micropython import const
 from adafruit_register.i2c_struct_array import StructArray
 from adafruit_register.i2c_struct import UnaryStruct
 from adafruit_register.i2c_bit import RWBit
-from . import EMC2101, MAX_LUT_SPEED, MAX_LUT_TEMP
+from adafruit_register.i2c_bits import RWBits
+from emc2101_regs import EMC2101_Regs
+from . import EMC2101
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
-
-_FAN_CONFIG = const(0x4A)
-_PWM_DIV = const(0x4E)
-_LUT_HYSTERESIS = const(0x4F)
-_LUT_BASE = const(0x50)
-
 
 
 class FanSpeedLUT:
@@ -61,7 +56,7 @@ class FanSpeedLUT:
     """
 
     # 8 (Temperature, Speed) pairs in increasing order
-    _fan_lut = StructArray(_LUT_BASE, "<B", 16)
+    _fan_lut = StructArray(EMC2101_Regs.LUT_BASE, "<B", 16)
 
     def __init__(self, fan_obj):
         self.emc_fan = fan_obj
@@ -130,7 +125,7 @@ class FanSpeedLUT:
 
         # Set the remaining LUT entries to the default (Temp/Speed = max value)
         for idx in range(len(self.lut_values), 8):
-            self._set_lut_entry(idx, MAX_LUT_TEMP, MAX_LUT_SPEED)
+            self._set_lut_entry(idx, EMC2101_Regs.MAX_LUT_TEMP, EMC2101_Regs.MAX_LUT_SPEED)
         self.emc_fan.lut_enabled = current_mode
 
     def _set_lut_entry(self, idx, temp, speed):
@@ -148,48 +143,47 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
     :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
     """
 
-    _int_temp_limit = UnaryStruct(_INT_TEMP_HI_LIM, "<B")
+    _int_temp_limit = UnaryStruct(EMC2101_Regs.INT_TEMP_HI_LIM, "<B")
     """Device internal temperature limit. If temperature is higher than this
     the ALERT actions are taken."""
-    _tcrit_limit = UnaryStruct(_TCRIT_TEMP, "<B")
+    _tcrit_limit = UnaryStruct(EMC2101_Regs.TCRIT_TEMP, "<B")
     """Device internal critical temperature. Device part spec is 0C to 85C."""
-    _tcrit_hyst = UnaryStruct(_TCRIT_HYST, "<B")
+    _tcrit_hyst = UnaryStruct(EMC2101_Regs.TCRIT_HYST, "<B")
     """Device internal critical temperature hysteresis, default 1C"""
 
     # Temperature in degrees:
-    _ext_temp_lo_limit_msb = RWBits(6, _EXT_TEMP_LO_LIM_LSB, 0)
+    _ext_temp_lo_limit_msb = RWBits(6, EMC2101_Regs.EXT_TEMP_LO_LIM_LSB, 0)
     """External temperature low-limit (integer part). If read temperature is
     lower than this, the ALERT actions are taken."""
-    _ext_temp_hi_limit_msb = RWBits(6, _EXT_TEMP_HI_LIM_LSB, 0)
+    _ext_temp_hi_limit_msb = RWBits(6, EMC2101_Regs.EXT_TEMP_HI_LIM_LSB, 0)
     """External temperature low-limit (3-bit fractional part). If read
     temperature is lower than this, the ALERT actions are taken."""
 
     # Limits, Fractions of degree (b7:0.5, b6:0.25, b5:0.125)
-    _ext_temp_lo_limit_lsb = RWBits(3, _EXT_TEMP_LO_LIM_LSB, 5)
+    _ext_temp_lo_limit_lsb = RWBits(3, EMC2101_Regs.EXT_TEMP_LO_LIM_LSB, 5)
     """External temperature high-limit (integer part). If read temperature is
     higher than this, the ALERT actions are taken."""
-    _ext_temp_hi_limit_lsb = RWBits(3, _EXT_TEMP_HI_LIM_LSB, 5)
+    _ext_temp_hi_limit_lsb = RWBits(3, EMC2101_Regs.EXT_TEMP_HI_LIM_LSB, 5)
     """External temperature high-limit (3-bit fractional part). If read
     temperature is higher than this, the ALERT actions are taken."""
 
-
-    _ext_ideality = RWBits(5, _EXT_IDEALITY, 0)
+    _ext_ideality = RWBits(5, EMC2101_Regs.EXT_IDEALITY, 0)
     """Factor setting the ideality factor applied to the external diode,
     based around a standard factor of 1.008. See table in datasheet for
     details"""
-    _ext_betacomp = RWBits(5, _EXT_BETACOMP, 0)
+    _ext_betacomp = RWBits(5, EMC2101_Regs.EXT_BETACOMP, 0)
     """Beta compensation setting. When using diode-connected transistor,
     disable with value of 0x7. Otherwise, bit 3 enables autodetection."""
 
-    _fan_clk_sel = RWBit(_FAN_CONFIG, 3)
+    _fan_clk_sel = RWBit(EMC2101_Regs.FAN_CONFIG, 3)
     """Select base clock used to determine pwm frequency, default 0 is 360KHz,
     and 1 is 1.4KHz."""
-    _fan_clk_ovr = RWBit(_FAN_CONFIG, 2)
+    _fan_clk_ovr = RWBit(EMC2101_Regs.FAN_CONFIG, 2)
     """Enable override of clk_sel to use pwm_freq_div register to determine
     the pwm frequency."""
 
-    _avg_filter = RWBits(2, _AVG_FILTER, 1)
-    _alert_comp = RWBit(_AVG_FILTER, 0)
+    _avg_filter = RWBits(2, EMC2101_Regs.AVG_FILTER, 1)
+    _alert_comp = RWBit(EMC2101_Regs.AVG_FILTER, 0)
 
 
     def __init__(self, i2c_bus):
@@ -203,18 +197,21 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
 
     @property
     def dev_temp_critical_limit(self):
-        """The critical temperature limit for the device (measured by internal sensor), in degrees."""
+        """The critical temperature limit for the device (measured by internal
+        sensor), in degrees."""
         return self._tcrit_limit
 
     @property
     def dev_temp_critical_hysteresis(self):
-        """The critical temperature hysteresis for the device (measured by internal sensor), in degrees."""
+        """The critical temperature hysteresis for the device (measured by
+        internal sensor), in degrees."""
 
-        return self._tcrit_hyst 
+        return self._tcrit_hyst
 
     @dev_temp_critical_hysteresis.setter
     def dev_temp_critical_hysteresis(self, hysteresis):
-        """The critical temperature hysteresis for the device (measured by internal sensor), in degrees (1..10)."""
+        """The critical temperature hysteresis for the device (measured by
+        internal sensor), in degrees (1..10)."""
 
         if hysteresis not in range(1, 10):
             raise AttributeError("dev_temp_critical_hysteresis must be from 1..10")
@@ -228,7 +225,8 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
 
     @dev_temp_high_limit.setter
     def dev_temp_high_limit(self, temp):
-        """The high limit temperature for the internal sensor, in degrees (0..85)."""
+        """The high limit temperature for the internal sensor, in
+        degrees (0..85)."""
 
         # Device specced from 0C to 85C
         if temp not in range(0, 85):
@@ -249,7 +247,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         return full_tmp
 
     @external_temp_low_limit.setter
-    def external_temp_low_limit(self, float: temp):
+    def external_temp_low_limit(self, temp: float):
         """Set low limit temperature for the external sensor."""
 
         if temp not in range(-40, 100):
@@ -263,7 +261,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         temp_lsb = temp_lsb << 5
         # Now drop 3 fraction bits.
         temp_msb = temp >> 3
-        
+
         # No ordering restrictions here.
         self._ext_temp_lo_limit_lsb = temp_lsb
         self._ext_temp_lo_limit_msb = temp_msb
@@ -283,7 +281,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         return full_tmp
 
     @external_temp_high_limit.setter
-    def external_temp_high_limit(self, float: temp):
+    def external_temp_high_limit(self, temp: float):
         """Set high limit temperature for the external sensor."""
 
         # Multiply by 8 to get 3 bits of fraction.
@@ -294,7 +292,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         temp_lsb = temp_lsb << 5
         # Now drop 3 fraction bits.
         temp_msb = temp >> 3
-        
+
         # No ordering restrictions here.
         self._ext_temp_hi_limit_lsb = temp_lsb
         self._ext_temp_hi_limit_msb = temp_msb
@@ -309,11 +307,7 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
     :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
     """
 
-    _fan_pwm_clock_select = RWBit(_FAN_CONFIG, 3)
-    _fan_pwm_clock_override = RWBit(_FAN_CONFIG, 2)
-    _pwm_freq_div = UnaryStruct(_PWM_DIV, "<B")
-
-    lut_temperature_hysteresis = UnaryStruct(_LUT_HYSTERESIS, "<B")
+    lut_temperature_hysteresis = UnaryStruct(EMC2101_Regs.LUT_HYSTERESIS, "<B")
     """The amount of hysteresis in Degrees Celsius of hysteresis applied to temperature readings
     used for the LUT. As the temperature drops, the controller will switch to a lower LUT entry when
     the measured value is below the lower entry's threshold, minus the hysteresis value"""
@@ -327,7 +321,7 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
     def initialize(self):
         """Reset the controller to an initial default configuration"""
         self.lut_enabled = False
-        self._fan_pwm_clock_override = True
+        self._fan_clk_ovr = True
         super().initialize()
 
     def set_pwm_clock(self, use_preset=False, use_slow=False):
@@ -353,8 +347,8 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
         if not isinstance(use_slow, bool):
             raise AttributeError("use_slow_pwm must be given a bool")
 
-        self._fan_pwm_clock_override = not use_preset
-        self._fan_pwm_clock_select = use_slow
+        self._fan_clk_ovr = not use_preset
+        self._fan_clk_sel = use_slow
 
     @property
     def pwm_frequency(self):

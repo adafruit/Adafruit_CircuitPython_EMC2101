@@ -36,50 +36,10 @@ from adafruit_register.i2c_struct import ROUnaryStruct, UnaryStruct
 from adafruit_register.i2c_bit import RWBit
 from adafruit_register.i2c_bits import RWBits
 import adafruit_bus_device.i2c_device as i2cdevice
+from emc2101_regs import EMC2101_Regs
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
-
-#
-# EMC2101 Register Addresses
-#
-_INTERNAL_TEMP = const(0x00)  # Readonly
-_EXTERNAL_TEMP_MSB = const(0x01)  # Readonly, Read MSB first
-_EXTERNAL_TEMP_LSB = const(0x10)  # Readonly
-_REG_STATUS = const(0x02)  # Readonly
-_REG_CONFIG = const(0x03)  # Also at 0x09
-_CONVERT_RATE = const(0x04)  # Also at 0x0A
-_INT_TEMP_HI_LIM = const(0x05)  # Also at 0x0B
-_TEMP_FORCE = const(0x0C)
-_ONESHOT = const(0x0F)  # Effectively Writeonly
-_SCRATCH_1 = const(0x11)
-_SCRATCH_2 = const(0x12)
-_EXT_TEMP_LO_LIM_LSB = const(0x14)
-_EXT_TEMP_LO_LIM_MSB = const(0x08)  # Also at 0x0E
-_EXT_TEMP_HI_LIM_LSB = const(0x13)
-_EXT_TEMP_HI_LIM_MSB = const(0x07)  # Also at 0x0D
-_ALERT_MASK = const(0x16)
-_EXT_IDEALITY = const(0x17)
-_EXT_BETACOMP = const(0x18)
-_TCRIT_TEMP = const(0x19)
-_TCRIT_HYST = const(0x21)
-_TACH_LSB = const(0x46)  # Readonly, Read MSB first
-_TACH_MSB = const(0x47)  # Readonly
-_TACH_LIMIT_LSB = const(0x48)
-_TACH_LIMIT_MSB = const(0x49)
-_FAN_CONFIG = const(0x4A)
-_FAN_SPINUP = const(0x4B)
-_REG_FAN_SETTING = const(0x4C)
-_PWM_FREQ = const(0x4D)
-_PWM_FREQ_DIV = const(0x4E)
-_FAN_TEMP_HYST = const(0x4F)
-_AVG_FILTER = const(0xBF)
-_REG_PARTID = const(0xFD)  # Readonly, 0x16 (or 0x28 for -R part)
-_REG_MFGID = const(0xFE)  # Readonly, SMSC is 0x5D
-_REG_REV = const(0xFF)  # Readonly, e.g. 0x01
-
-MAX_LUT_SPEED = 0x3F  # 6-bit value
-MAX_LUT_TEMP = 0x7F  # 7-bit
 
 MFG_ID_SMSC = 0x5D
 PART_ID_EMC2101 = 0x16
@@ -204,13 +164,13 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     Datasheet: https://ww1.microchip.com/downloads/en/DeviceDoc/2101.pdf
     """
 
-    _part_id = ROUnaryStruct(_REG_PARTID, "<B")
+    _part_id = ROUnaryStruct(EMC2101_Regs.REG_PARTID, "<B")
     """Device Part ID field value, see also _part_rev and _part_id."""
-    _mfg_id = ROUnaryStruct(_REG_MFGID, "<B")
+    _mfg_id = ROUnaryStruct(EMC2101_Regs.REG_MFGID, "<B")
     """Device Manufacturer ID field value, see also _part_rev and _part_id."""
-    _part_rev = ROUnaryStruct(_REG_REV, "<B")
+    _part_rev = ROUnaryStruct(EMC2101_Regs.REG_REV, "<B")
     """Device Part revision field value, see also _mfg_id and _part_id."""
-    _int_temp = ROUnaryStruct(_INTERNAL_TEMP, "<b")
+    _int_temp = ROUnaryStruct(EMC2101_Regs.INTERNAL_TEMP, "<b")
 
     # Some of these registers are defined as two halves because the chip does
     # not support multi-byte reads or writes, and there is currently no way to
@@ -221,49 +181,48 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     #     and lsb as unsigned.
     # The Lsbyte is shadow-copied when Msbyte is read, so read Msbyte first to
     #     avoid risk of bad reads. See datasheet section 6.1 Data Read Interlock.
-    _ext_temp_msb = ROUnaryStruct(_EXTERNAL_TEMP_MSB, "<b")
+    _ext_temp_msb = ROUnaryStruct(EMC2101_Regs.EXTERNAL_TEMP_MSB, "<b")
     # Fractions of degree (b7:0.5, b6:0.25, b5:0.125)
-    _ext_temp_lsb = ROUnaryStruct(_EXTERNAL_TEMP_LSB, "<B")
+    _ext_temp_lsb = ROUnaryStruct(EMC2101_Regs.EXTERNAL_TEMP_LSB, "<B")
 
     # IMPORTANT!
     # The Msbyte is shadow-copied when Lsbyte is read, so read Lsbyte first to
     #     avoid risk of bad reads. See datasheet section 6.1 Data Read Interlock.
-    _tach_read_lsb = ROUnaryStruct(_TACH_LSB, "<B")
-    _tach_read_msb = ROUnaryStruct(_TACH_MSB, "<B")
+    _tach_read_lsb = ROUnaryStruct(EMC2101_Regs.TACH_LSB, "<B")
+    _tach_read_msb = ROUnaryStruct(EMC2101_Regs.TACH_MSB, "<B")
 
-    _tach_mode_enable = RWBit(_REG_CONFIG, 2)
-    _tach_limit_lsb = UnaryStruct(_TACH_LIMIT_LSB, "<B")
-    _tach_limit_msb = UnaryStruct(_TACH_LIMIT_MSB, "<B")
+    _tach_mode_enable = RWBit(EMC2101_Regs.REG_CONFIG, 2)
+    _tach_limit_lsb = UnaryStruct(EMC2101_Regs.TACH_LIMIT_LSB, "<B")
+    _tach_limit_msb = UnaryStruct(EMC2101_Regs.TACH_LIMIT_MSB, "<B")
 
     # Temperature used to override current external temp measurement.
     # Force Temp is 7-bit + sign (one's complement?)
-    forced_ext_temp = UnaryStruct(_TEMP_FORCE, "<b")
+    forced_ext_temp = UnaryStruct(EMC2101_Regs.TEMP_FORCE, "<b")
     """The value that the external temperature will be forced to read when
     `forced_temp_enabled` is set. This can be used to test the behavior of
     the LUT without real temperature changes. Force Temp is 7-bit + sign
     (one's complement?) """
-    forced_temp_enabled = RWBit(_FAN_CONFIG, 6)
+    forced_temp_enabled = RWBit(EMC2101_Regs.FAN_CONFIG, 6)
     """When True, the external temperature measurement will always be read
     as the value in `forced_ext_temp`. Not applicable if LUT disabled."""
 
     # PWM/Fan control
-    _fan_setting = UnaryStruct(_REG_FAN_SETTING, "<B")
-    _pwm_freq = RWBits(5, _PWM_FREQ, 0)
-    _pwm_freq_div = UnaryStruct(_PWM_FREQ_DIV, "<B")
-    _fan_lut_prog = RWBit(_FAN_CONFIG, 5)
+    _fan_setting = UnaryStruct(EMC2101_Regs.REG_FAN_SETTING, "<B")
+    _pwm_freq = RWBits(5, EMC2101_Regs.PWM_FREQ, 0)
+    _pwm_freq_div = UnaryStruct(EMC2101_Regs.PWM_FREQ_DIV, "<B")
+    _fan_lut_prog = RWBit(EMC2101_Regs.FAN_CONFIG, 5)
     """Programming-enable (write-enable) bit for the LUT registers."""
 
-    _fan_temp_hyst = RWBits(5, _FAN_TEMP_HYST, 0)
+    _fan_temp_hyst = RWBits(5, EMC2101_Regs.FAN_TEMP_HYST, 0)
     """The amount of hysteresis applied to temp input to the look up table."""
 
-    _dac_output_enabled = RWBit(_REG_CONFIG, 4)
-    _conversion_rate = RWBits(4, _CONVERT_RATE, 0)
+    _dac_output_enabled = RWBit(EMC2101_Regs.REG_CONFIG, 4)
+    _conversion_rate = RWBits(4, EMC2101_Regs.CONVERT_RATE, 0)
 
     # Fan spin-up
-    _spin_drive = RWBits(2, _FAN_SPINUP, 3)
-    _spin_time = RWBits(3, _FAN_SPINUP, 0)
-    _spin_tach_limit = RWBit(_FAN_SPINUP, 5)
-
+    _spin_drive = RWBits(2, EMC2101_Regs.FAN_SPINUP, 3)
+    _spin_time = RWBits(3, EMC2101_Regs.FAN_SPINUP, 0)
+    _spin_tach_limit = RWBit(EMC2101_Regs.FAN_SPINUP, 5)
 
     def __init__(self, i2c_bus):
         self.i2c_device = i2cdevice.I2CDevice(i2c_bus, _I2C_ADDR)
@@ -321,7 +280,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
         if dac:
             # DAC mode is independent of PWM_F.
-            self._full_speed_lsb = float(MAX_LUT_SPEED)
+            self._full_speed_lsb = float(EMC2101_Regs.MAX_LUT_SPEED)
             return
 
         # PWM mode reaches 100% duty cycle at a 2*PWM_F setting.
@@ -340,7 +299,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         """The fan speed used while the LUT is being updated and is unavailable. The speed is
         given as the fan's PWM duty cycle represented as a float percentage.
         The value roughly approximates the percentage of the fan's maximum speed"""
-        raw_setting = self._fan_setting & MAX_LUT_SPEED
+        raw_setting = self._fan_setting & EMC2101_Regs.MAX_LUT_SPEED
         return (raw_setting / self._full_speed_lsb) * 100
 
     @manual_fan_speed.setter
