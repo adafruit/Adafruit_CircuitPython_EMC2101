@@ -169,6 +169,8 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
 
+    See :class:`adafruit_emc2101.EMC2101_EXT` for (almost) complete device register set.
+    See :class:`adafruit_emc2101.EMC2101_LUT` for the temperature look up table functionality.
 
     **Quickstart: Importing and using the device**
 
@@ -203,8 +205,11 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     """
 
     _part_id = ROUnaryStruct(_REG_PARTID, "<B")
+    """Device Part ID field value, see also _part_rev and _part_id."""
     _mfg_id = ROUnaryStruct(_REG_MFGID, "<B")
+    """Device Manufacturer ID field value, see also _part_rev and _part_id."""
     _part_rev = ROUnaryStruct(_REG_REV, "<B")
+    """Device Part revision field value, see also _mfg_id and _part_id."""
     _int_temp = ROUnaryStruct(_INTERNAL_TEMP, "<b")
 
     # Some of these registers are defined as two halves because the chip does
@@ -230,47 +235,16 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     _tach_limit_lsb = UnaryStruct(_TACH_LIMIT_LSB, "<B")
     _tach_limit_msb = UnaryStruct(_TACH_LIMIT_MSB, "<B")
 
-    _int_temp_limit = UnaryStruct(_INT_TEMP_HI_LIM, "<B")
-    """Device internal temperature limit. If temperature is higher than this
-    the ALERT actions are taken."""
-    _tcrit_limit = UnaryStruct(_TCRIT_TEMP, "<B")
-    """Device internal critical temperature. Device part spec is 0C to 85C."""
-    _tcrit_hyst = UnaryStruct(_TCRIT_HYST, "<B")
-    """Device internal critical temperature hysteresis, default 1C"""
-
-    # Temperature in degrees:
-    _ext_temp_lo_limit_msb = RWBits(6, _EXT_TEMP_LO_LIM_LSB, 0)
-    """External temperature low-limit (integer part). If read temperature is
-    lower than this, the ALERT actions are taken."""
-    _ext_temp_hi_limit_msb = RWBits(6, _EXT_TEMP_HI_LIM_LSB, 0)
-    """External temperature low-limit (3-bit fractional part). If read
-    temperature is lower than this, the ALERT actions are taken."""
-
-    # Limits, Fractions of degree (b7:0.5, b6:0.25, b5:0.125)
-    _ext_temp_lo_limit_lsb = RWBits(3, _EXT_TEMP_LO_LIM_LSB, 5)
-    """External temperature high-limit (integer part). If read temperature is
-    higher than this, the ALERT actions are taken."""
-    _ext_temp_hi_limit_lsb = RWBits(3, _EXT_TEMP_HI_LIM_LSB, 5)
-    """External temperature high-limit (3-bit fractional part). If read
-    temperature is higher than this, the ALERT actions are taken."""
-
     # Temperature used to override current external temp measurement.
     # Force Temp is 7-bit + sign (one's complement?)
     forced_ext_temp = UnaryStruct(_TEMP_FORCE, "<b")
     """The value that the external temperature will be forced to read when
     `forced_temp_enabled` is set. This can be used to test the behavior of
-    the LUT without real temperature changes."""
+    the LUT without real temperature changes. Force Temp is 7-bit + sign
+    (one's complement?) """
     forced_temp_enabled = RWBit(_FAN_CONFIG, 6)
     """When True, the external temperature measurement will always be read
     as the value in `forced_ext_temp`. Not applicable if LUT disabled."""
-
-    _ext_ideality = RWBits(5, _EXT_IDEALITY, 0)
-    """Factor setting the ideality factor applied to the external diode,
-    based around a standard factor of 1.008. See table in datasheet for
-    details"""
-    _ext_betacomp = RWBits(5, _EXT_BETACOMP, 0)
-    """Beta compensation setting. When using diode-connected transistor,
-    disable with value of 0x7. Otherwise, bit 3 enables autodetection."""
 
     # PWM/Fan control
     _fan_setting = UnaryStruct(_REG_FAN_SETTING, "<B")
@@ -278,27 +252,18 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     _pwm_freq_div = UnaryStruct(_PWM_FREQ_DIV, "<B")
     _fan_lut_prog = RWBit(_FAN_CONFIG, 5)
     """Programming-enable (write-enable) bit for the LUT registers."""
-    _fan_clk_sel = RWBit(_FAN_CONFIG, 3)
-    """Select base clock used to determine pwm frequency, default 0 is 360KHz,
-    and 1 is 1.4KHz."""
-    _fan_clk_ovr = RWBit(_FAN_CONFIG, 2)
-    """Enable override of clk_sel to use pwm_freq_div register to determine
-    the pwm frequency."""
-    invert_fan_output = RWBit(_FAN_CONFIG, 4)
-    """When set to True, the magnitude of the fan output signal is inverted,
-    making 0 the maximum value and 100 the minimum value."""
+
     _fan_temp_hyst = RWBits(5, _FAN_TEMP_HYST, 0)
     """The amount of hysteresis applied to temp input to the look up table."""
 
     _dac_output_enabled = RWBit(_REG_CONFIG, 4)
     _conversion_rate = RWBits(4, _CONVERT_RATE, 0)
-    _avg_filter = RWBits(2, _AVG_FILTER, 1)
-    _alert_comp = RWBit(_AVG_FILTER, 0)
 
     # Fan spin-up
     _spin_drive = RWBits(2, _FAN_SPINUP, 3)
     _spin_time = RWBits(3, _FAN_SPINUP, 0)
     _spin_tach_limit = RWBit(_FAN_SPINUP, 5)
+
 
     def __init__(self, i2c_bus):
         self.i2c_device = i2cdevice.I2CDevice(i2c_bus, _I2C_ADDR)
