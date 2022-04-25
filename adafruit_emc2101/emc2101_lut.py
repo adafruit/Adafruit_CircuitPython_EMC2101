@@ -38,7 +38,7 @@ from adafruit_register.i2c_struct_array import StructArray
 from adafruit_register.i2c_struct import UnaryStruct
 from adafruit_register.i2c_bit import RWBit
 from adafruit_register.i2c_bits import RWBits
-from emc2101_regs import EMC2101_Regs
+from .emc2101_regs import EMC2101_Regs
 from . import EMC2101
 
 __version__ = "0.0.0-auto.0"
@@ -99,6 +99,17 @@ class FanSpeedLUT:
 
         return "\n".join(value_strs)
 
+    @property
+    def lookup_table(self):
+        """Return a dictionary of LUT values."""
+        lut_keys = tuple(sorted(self.lut_values.keys()))
+        values = {}
+        for temp in lut_keys:
+            fan_drive = self.lut_values[temp]
+            # pylint: disable=consider-using-f-string
+            values[temp] = fan_drive
+        return values
+
     def __len__(self):
         return len(self.lut_values)
 
@@ -154,18 +165,18 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
     _tcrit_hyst = UnaryStruct(EMC2101_Regs.TCRIT_HYST, "<B")
     """Device internal critical temperature hysteresis, default 1C"""
 
-    # Temperature in degrees:
-    _ext_temp_lo_limit_msb = RWBits(6, EMC2101_Regs.EXT_TEMP_LO_LIM_LSB, 0)
+    # Limits, Integer Temperature in degrees:
+    _ext_temp_lo_limit_msb = RWBits(6, EMC2101_Regs.EXT_TEMP_LO_LIM_MSB, 0)
     """External temperature low-limit (integer part). If read temperature is
     lower than this, the ALERT actions are taken."""
-    _ext_temp_hi_limit_msb = RWBits(6, EMC2101_Regs.EXT_TEMP_HI_LIM_LSB, 0)
-    """External temperature low-limit (3-bit fractional part). If read
-    temperature is lower than this, the ALERT actions are taken."""
+    _ext_temp_hi_limit_msb = RWBits(6, EMC2101_Regs.EXT_TEMP_HI_LIM_MSB, 0)
+    """External temperature high-limit (integer part). If read temperature is
+    higher than this, the ALERT actions are taken."""
 
     # Limits, Fractions of degree (b7:0.5, b6:0.25, b5:0.125)
     _ext_temp_lo_limit_lsb = RWBits(3, EMC2101_Regs.EXT_TEMP_LO_LIM_LSB, 5)
-    """External temperature high-limit (integer part). If read temperature is
-    higher than this, the ALERT actions are taken."""
+    """External temperature low-limit (3-bit fractional part). If read
+    temperature is lower than this, the ALERT actions are taken."""
     _ext_temp_hi_limit_lsb = RWBits(3, EMC2101_Regs.EXT_TEMP_HI_LIM_LSB, 5)
     """External temperature high-limit (3-bit fractional part). If read
     temperature is higher than this, the ALERT actions are taken."""
@@ -242,11 +253,11 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         # No ordering restrictions here.
         temp_lsb = self._ext_temp_lo_limit_lsb
         temp_msb = self._ext_temp_lo_limit_msb
-        full_tmp = (temp_msb << 8) | (temp_lsb & 0xE0)
-        full_tmp >>= 5
-        full_tmp *= 0.125
 
-        return full_tmp
+        temp = (temp_msb << 8) | (temp_lsb & 0xE0)
+        temp >>= 5
+        temp *= 0.125
+        return temp
 
     @external_temp_low_limit.setter
     def external_temp_low_limit(self, temp: float):
@@ -255,7 +266,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         if temp not in range(-40, 100):
             raise AttributeError("dev_temp_high_limit must be from -40..100")
 
-        # Multiply by 8 to get 3 bits of fraction.
+        # Multiply by 8 to get 3 bits of fraction within the integer.
         temp *= 8.0
         temp = int(temp)
         # Mask 3 bits & shift to bits 5,6,7 in byte
@@ -304,7 +315,7 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
     """Driver for the EMC2101 Fan Controller, with PWM frequency and LUT control.
 
     See :class:`adafruit_emc2101.EMC2101` for the base/common functionality.
-    See :class:`adafruit_emc2101.EMC2101_EXT` for (almost) complete device register set.
+    See :class:`adafruit_emc2101.EMC2101_EXT` for (almost) complete device register set but no LUT.
 
     :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
     """

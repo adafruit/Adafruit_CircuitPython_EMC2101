@@ -36,7 +36,7 @@ from adafruit_register.i2c_struct import ROUnaryStruct, UnaryStruct
 from adafruit_register.i2c_bit import RWBit
 from adafruit_register.i2c_bits import RWBits
 import adafruit_bus_device.i2c_device as i2cdevice
-from emc2101_regs import EMC2101_Regs
+from .emc2101_regs import EMC2101_Regs
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
