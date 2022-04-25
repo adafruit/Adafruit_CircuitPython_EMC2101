@@ -49,6 +49,7 @@ _LUT_HYSTERESIS = const(0x4F)
 _LUT_BASE = const(0x50)
 
 
+
 class FanSpeedLUT:
     """A class used to provide a dict-like interface to the EMC2101's Temperature to Fan speed
     Look Up Table.
@@ -137,10 +138,173 @@ class FanSpeedLUT:
         self._fan_lut[idx * 2 + 1] = bytearray((speed,))
 
 
-class EMC2101_LUT(EMC2101):  # pylint: disable=too-many-instance-attributes
+
+class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
+    """Driver for EMC2101 Fan, adding definitions for all (but LUT) device registers.
+
+    See :class:`adafruit_emc2101.EMC2101` for the base/common functionality.
+    See :class:`adafruit_emc2101.EMC2101_LUT` for the temperature look up table functionality.
+
+    :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
+    """
+
+    _int_temp_limit = UnaryStruct(_INT_TEMP_HI_LIM, "<B")
+    """Device internal temperature limit. If temperature is higher than this
+    the ALERT actions are taken."""
+    _tcrit_limit = UnaryStruct(_TCRIT_TEMP, "<B")
+    """Device internal critical temperature. Device part spec is 0C to 85C."""
+    _tcrit_hyst = UnaryStruct(_TCRIT_HYST, "<B")
+    """Device internal critical temperature hysteresis, default 1C"""
+
+    # Temperature in degrees:
+    _ext_temp_lo_limit_msb = RWBits(6, _EXT_TEMP_LO_LIM_LSB, 0)
+    """External temperature low-limit (integer part). If read temperature is
+    lower than this, the ALERT actions are taken."""
+    _ext_temp_hi_limit_msb = RWBits(6, _EXT_TEMP_HI_LIM_LSB, 0)
+    """External temperature low-limit (3-bit fractional part). If read
+    temperature is lower than this, the ALERT actions are taken."""
+
+    # Limits, Fractions of degree (b7:0.5, b6:0.25, b5:0.125)
+    _ext_temp_lo_limit_lsb = RWBits(3, _EXT_TEMP_LO_LIM_LSB, 5)
+    """External temperature high-limit (integer part). If read temperature is
+    higher than this, the ALERT actions are taken."""
+    _ext_temp_hi_limit_lsb = RWBits(3, _EXT_TEMP_HI_LIM_LSB, 5)
+    """External temperature high-limit (3-bit fractional part). If read
+    temperature is higher than this, the ALERT actions are taken."""
+
+
+    _ext_ideality = RWBits(5, _EXT_IDEALITY, 0)
+    """Factor setting the ideality factor applied to the external diode,
+    based around a standard factor of 1.008. See table in datasheet for
+    details"""
+    _ext_betacomp = RWBits(5, _EXT_BETACOMP, 0)
+    """Beta compensation setting. When using diode-connected transistor,
+    disable with value of 0x7. Otherwise, bit 3 enables autodetection."""
+
+    _fan_clk_sel = RWBit(_FAN_CONFIG, 3)
+    """Select base clock used to determine pwm frequency, default 0 is 360KHz,
+    and 1 is 1.4KHz."""
+    _fan_clk_ovr = RWBit(_FAN_CONFIG, 2)
+    """Enable override of clk_sel to use pwm_freq_div register to determine
+    the pwm frequency."""
+
+    _avg_filter = RWBits(2, _AVG_FILTER, 1)
+    _alert_comp = RWBit(_AVG_FILTER, 0)
+
+
+    def __init__(self, i2c_bus):
+        super().__init__(i2c_bus)
+        self.initialize()
+
+    def initialize(self):
+        """Reset the controller to an initial default configuration"""
+        self.extended_api = True
+        super().initialize()
+
+    @property
+    def dev_temp_critical_limit(self):
+        """The critical temperature limit for the device (measured by internal sensor), in degrees."""
+        return self._tcrit_limit
+
+    @property
+    def dev_temp_critical_hysteresis(self):
+        """The critical temperature hysteresis for the device (measured by internal sensor), in degrees."""
+
+        return self._tcrit_hyst 
+
+    @dev_temp_critical_hysteresis.setter
+    def dev_temp_critical_hysteresis(self, hysteresis):
+        """The critical temperature hysteresis for the device (measured by internal sensor), in degrees (1..10)."""
+
+        if hysteresis not in range(1, 10):
+            raise AttributeError("dev_temp_critical_hysteresis must be from 1..10")
+        self._tcrit_hyst = hysteresis
+
+    @property
+    def dev_temp_high_limit(self):
+        """The high limit temperature for the internal sensor, in degrees."""
+
+        return self._int_temp_limit
+
+    @dev_temp_high_limit.setter
+    def dev_temp_high_limit(self, temp):
+        """The high limit temperature for the internal sensor, in degrees (0..85)."""
+
+        # Device specced from 0C to 85C
+        if temp not in range(0, 85):
+            raise AttributeError("dev_temp_high_limit must be from 0..85")
+        self._int_temp_limit = temp
+
+    @property
+    def external_temp_low_limit(self):
+        """The low limit temperature for the external sensor."""
+
+        # No ordering restrictions here.
+        temp_lsb = self._ext_temp_lo_limit_lsb
+        temp_msb = self._ext_temp_lo_limit_msb
+        full_tmp = (temp_msb << 8) | (temp_lsb & 0xe0)
+        full_tmp >>= 5
+        full_tmp *= 0.125
+
+        return full_tmp
+
+    @external_temp_low_limit.setter
+    def external_temp_low_limit(self, float: temp):
+        """Set low limit temperature for the external sensor."""
+
+        if temp not in range(-40, 100):
+            raise AttributeError("dev_temp_high_limit must be from -40..100")
+
+        # Multiply by 8 to get 3 bits of fraction.
+        temp *= 8.0
+        temp = int(temp)
+        # Mask 3 bits & shift to bits 5,6,7 in byte
+        temp_lsb = temp & 0x07
+        temp_lsb = temp_lsb << 5
+        # Now drop 3 fraction bits.
+        temp_msb = temp >> 3
+        
+        # No ordering restrictions here.
+        self._ext_temp_lo_limit_lsb = temp_lsb
+        self._ext_temp_lo_limit_msb = temp_msb
+
+    @property
+    def external_temp_high_limit(self):
+        """The high limit temperature for the external sensor."""
+
+        # No ordering restrictions here.
+        temp_lsb = self._ext_temp_hi_limit_lsb
+        temp_msb = self._ext_temp_hi_limit_msb
+        # Mask bottom bits of lsb, or with shifted msb
+        full_tmp = (temp_msb << 8) | (temp_lsb & 0xe0)
+        full_tmp >>= 5
+        full_tmp *= 0.125
+
+        return full_tmp
+
+    @external_temp_high_limit.setter
+    def external_temp_high_limit(self, float: temp):
+        """Set high limit temperature for the external sensor."""
+
+        # Multiply by 8 to get 3 bits of fraction.
+        temp *= 8.0
+        temp = int(temp)
+        # Mask 3 bits & shift to bits 5,6,7 in byte
+        temp_lsb = temp & 0x07
+        temp_lsb = temp_lsb << 5
+        # Now drop 3 fraction bits.
+        temp_msb = temp >> 3
+        
+        # No ordering restrictions here.
+        self._ext_temp_hi_limit_lsb = temp_lsb
+        self._ext_temp_hi_limit_msb = temp_msb
+
+
+class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
     """Driver for the EMC2101 Fan Controller, with PWM frequency and LUT control.
 
     See :class:`adafruit_emc2101.EMC2101` for the base/common functionality.
+    See :class:`adafruit_emc2101.EMC2101_EXT` for (almost) complete device register set.
 
     :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
     """
