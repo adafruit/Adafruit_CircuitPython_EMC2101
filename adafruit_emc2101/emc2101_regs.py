@@ -74,7 +74,6 @@ class EMC2101_Regs:  # pylint: disable=too-few-public-methods
     REG_MFGID = const(0xFE)  # Readonly, SMSC is 0x5D
     REG_REV = const(0xFF)  # Readonly, e.g. 0x01
 
-
     FAN_CONFIG = const(0x4A)
     LUT_HYSTERESIS = const(0x4F)
     LUT_BASE = const(0x50)
