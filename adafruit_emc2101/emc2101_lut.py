@@ -125,13 +125,14 @@ class FanSpeedLUT:
 
         # Set the remaining LUT entries to the default (Temp/Speed = max value)
         for idx in range(len(self.lut_values), 8):
-            self._set_lut_entry(idx, EMC2101_Regs.MAX_LUT_TEMP, EMC2101_Regs.MAX_LUT_SPEED)
+            self._set_lut_entry(
+                idx, EMC2101_Regs.MAX_LUT_TEMP, EMC2101_Regs.MAX_LUT_SPEED
+            )
         self.emc_fan.lut_enabled = current_mode
 
     def _set_lut_entry(self, idx, temp, speed):
         self._fan_lut[idx * 2] = bytearray((temp,))
         self._fan_lut[idx * 2 + 1] = bytearray((speed,))
-
 
 
 class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
@@ -184,7 +185,6 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
 
     _avg_filter = RWBits(2, EMC2101_Regs.AVG_FILTER, 1)
     _alert_comp = RWBit(EMC2101_Regs.AVG_FILTER, 0)
-
 
     def __init__(self, i2c_bus):
         super().__init__(i2c_bus)
@@ -240,7 +240,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         # No ordering restrictions here.
         temp_lsb = self._ext_temp_lo_limit_lsb
         temp_msb = self._ext_temp_lo_limit_msb
-        full_tmp = (temp_msb << 8) | (temp_lsb & 0xe0)
+        full_tmp = (temp_msb << 8) | (temp_lsb & 0xE0)
         full_tmp >>= 5
         full_tmp *= 0.125
 
@@ -274,7 +274,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         temp_lsb = self._ext_temp_hi_limit_lsb
         temp_msb = self._ext_temp_hi_limit_msb
         # Mask bottom bits of lsb, or with shifted msb
-        full_tmp = (temp_msb << 8) | (temp_lsb & 0xe0)
+        full_tmp = (temp_msb << 8) | (temp_lsb & 0xE0)
         full_tmp >>= 5
         full_tmp *= 0.125
 
