@@ -387,7 +387,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         """Set the speed limiter on the fan PWM signal. The value of 15000 is
         arbitrary, but very few fans run faster than this.
         """
-        if new_limit not in range(1, 15000):
+        if not 1 <= new_limit <= 14000:
             raise AttributeError("tach_limit must be from 1-14000")
         num = int(emc2101_regs._FAN_RPM_DIVISOR / new_limit)
         self._tach_limit_lsb = num & 0xFF
