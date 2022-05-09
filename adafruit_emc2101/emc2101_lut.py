@@ -66,7 +66,7 @@ class FanSpeedLUT:
         self.i2c_device = fan_obj.i2c_device
 
     def __enter__(self):
-        """ 'with' wrapper: defer lut update until end of 'with'
+        """'with' wrapper: defer lut update until end of 'with'
         so update_lut work can be done just once at the end of
         setting the LUT.
 
@@ -83,7 +83,7 @@ class FanSpeedLUT:
 
     # 'with' wrapper
     def __exit__(self, typ, val, tbk):
-        """ 'with' wrapper: defer lut update until end of 'with'
+        """'with' wrapper: defer lut update until end of 'with'
         so update_lut work can be done just once at the end of
         setting the LUT.
         """
