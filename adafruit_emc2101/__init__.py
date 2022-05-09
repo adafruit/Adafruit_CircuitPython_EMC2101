@@ -117,18 +117,23 @@ SpinupTime.add_values(
 class EMC2101Exception(Exception):
     """Base class for exceptions raised by EMC2101 class."""
 
+
 class EMC2101NotFoundException(EMC2101Exception):
     """Exception for no EMC chip found on I2C bus."""
+
 
 class EMC2101LimitsException(EMC2101Exception):
     """Exception for detected temperature limit exceeded condition. Check
     the status register for details."""
 
+
 class EMC2101OpenCircuitException(EMC2101Exception):
     """Exception for external temperature sensor open circuit fault."""
 
+
 class EMC2101ShortCircuitException(EMC2101Exception):
     """Exception for external temperature sensor short circuit fault."""
+
 
 class EMC2101BadValueException(EMC2101Exception):
     """Exception for values read from chip registers that should not happen."""
