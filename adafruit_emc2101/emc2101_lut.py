@@ -107,7 +107,7 @@ class FanSpeedLUT:
             del self.lut_values[index]
         elif value > 100.0 or value < 0:
             # Range check
-            raise AttributeError("LUT values must be a fan speed from 0-100%")
+            raise ValueError("LUT values must be a fan speed from 0-100%")
         else:
             self.lut_values[index] = value
         if self._defer_update == 0:
@@ -149,7 +149,7 @@ class FanSpeedLUT:
     def _update_lut(self):
         # Make sure we're not going to try to set more entries than we have slots
         if len(self.lut_values) > 8:
-            raise AttributeError("LUT can only contain a maximum of 8 items")
+            raise ValueError("LUT can only contain a maximum of 8 items")
 
         # Backup state
         current_mode = self.emc_fan.lut_enabled
@@ -299,7 +299,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         """The critical temperature hysteresis for the device (measured by
         internal sensor), in degrees (1..10)."""
         if not 0 <= hysteresis <= 10:
-            raise AttributeError("dev_temp_critical_hysteresis must be from 1..10")
+            raise ValueError("dev_temp_critical_hysteresis must be from 1..10")
         self._check_status()
         self._tcrit_hyst = hysteresis
 
@@ -315,7 +315,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         degrees (0..85)."""
         # Device specced from 0C to 85C
         if not 0 <= temp <= 85:
-            raise AttributeError("dev_temp_high_limit must be from 0..85")
+            raise ValueError("dev_temp_high_limit must be from 0..85")
         self._check_status()
         self._int_temp_limit = temp
 
@@ -337,7 +337,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
     def external_temp_low_limit(self, temp: float):
         """Set low limit temperature for the external sensor."""
         if not -64 <= temp <= 127:
-            raise AttributeError("dev_temp_high_limit must be from -64..127")
+            raise ValueError("dev_temp_high_limit must be from -64..127")
 
         self._check_status()
         # Multiply by 8 to get 3 bits of fraction within the integer.
@@ -427,15 +427,15 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
              False: Use the 360kHz clock.
         :type priority: integer or None
         :return: None
-        :raises AttributeError: if use_preset is not a `bool`
-        :raises AttributeError: if use_slow is not a `bool`
+        :raises ValueError: if use_preset is not a `bool`
+        :raises ValueError: if use_slow is not a `bool`
 
         """
 
         if not isinstance(use_preset, bool):
-            raise AttributeError("use_preset must be given a bool")
+            raise ValueError("use_preset must be given a bool")
         if not isinstance(use_slow, bool):
-            raise AttributeError("use_slow_pwm must be given a bool")
+            raise ValueError("use_slow_pwm must be given a bool")
 
         self._check_status()
         self._fan_clk_ovr = not use_preset
@@ -450,7 +450,7 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
     @pwm_frequency.setter
     def pwm_frequency(self, value):
         if not 0 <= value < 32:
-            raise AttributeError("pwm_frequency must be from 0-31")
+            raise ValueError("pwm_frequency must be from 0-31")
         self._check_status()
         self._pwm_freq = value
         self._calculate_full_speed(pwm_f=value)
@@ -464,7 +464,7 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
     @pwm_frequency_divisor.setter
     def pwm_frequency_divisor(self, divisor):
         if not 0 <= divisor <= 255:
-            raise AttributeError("pwm_frequency_divisor must be from 0-255")
+            raise ValueError("pwm_frequency_divisor must be from 0-255")
         self._check_status()
         self._pwm_freq_div = divisor
 
