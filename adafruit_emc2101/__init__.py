@@ -233,13 +233,12 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     # Fan spin-up
     _spin_drive = RWBits(2, emc2101_regs.FAN_SPINUP, 3)
-    """
-    """
+    """Set the drive circuit power during spin up, from bypass, 50%, 75% and 100%."""
     _spin_time = RWBits(3, emc2101_regs.FAN_SPINUP, 0)
-    """
-    """
+    """Set the time the fan drive stays in spin_up, from 0 to 3.2 sec."""
     _spin_tach_limit = RWBit(emc2101_regs.FAN_SPINUP, 5)
-    """
+    """Set whether spin-up is aborted if measured speed is lower than the limit.
+    Ignored unless REG_CONFIG bit 3 (alt_tach) is 1.
     """
 
     def __init__(self, i2c_bus):
