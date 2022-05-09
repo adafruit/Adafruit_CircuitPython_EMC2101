@@ -280,7 +280,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
             or self._mfg_id != emc2101_regs.MFG_ID_SMSC
         ):
             raise EMC2101NotFoundException("Cannot find a EMC2101")
-            # raise AttributeError("Cannot find a EMC2101")
+            # raise ValueError("Cannot find a EMC2101")
 
         self._full_speed_lsb = None  # See _calculate_full_speed().
         self.initialize()
@@ -381,7 +381,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     @manual_fan_speed.setter
     def manual_fan_speed(self, fan_speed):
         if not 0 <= fan_speed <= 100:
-            raise AttributeError("manual_fan_speed must be from 0-100")
+            raise ValueError("manual_fan_speed must be from 0-100")
 
         fan_speed_lsb = self._speed_to_lsb(fan_speed)
         lut_disabled = self._fan_lut_prog
@@ -432,7 +432,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         arbitrary, but very few fans run faster than this.
         """
         if not 1 <= new_limit <= 15000:
-            raise AttributeError("tach_limit must be from 1-15000")
+            raise ValueError("tach_limit must be from 1-15000")
         num = int(emc2101_regs.FAN_RPM_DIVISOR / new_limit)
         self._tach_limit_lsb = num & 0xFF
         self._tach_limit_msb = (num >> 8) & 0xFF
@@ -446,7 +446,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     @spinup_time.setter
     def spinup_time(self, spin_time):
         if not SpinupTime.is_valid(spin_time):
-            raise AttributeError("spinup_time must be a SpinupTime")
+            raise ValueError("spinup_time must be a SpinupTime")
         self._spin_time = spin_time
 
     @property
@@ -457,7 +457,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     @spinup_drive.setter
     def spinup_drive(self, spin_drive):
         if not SpinupDrive.is_valid(spin_drive):
-            raise AttributeError("spinup_drive must be a SpinupDrive")
+            raise ValueError("spinup_drive must be a SpinupDrive")
         self._spin_drive = spin_drive
 
     @property
@@ -468,5 +468,5 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     @conversion_rate.setter
     def conversion_rate(self, rate):
         if not ConversionRate.is_valid(rate):
-            raise AttributeError("conversion_rate must be a `ConversionRate`")
+            raise ValueError("conversion_rate must be a `ConversionRate`")
         self._conversion_rate = rate
