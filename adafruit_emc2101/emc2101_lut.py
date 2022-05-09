@@ -39,7 +39,7 @@ from adafruit_register.i2c_struct import UnaryStruct
 from adafruit_register.i2c_bit import RWBit
 from adafruit_register.i2c_bits import RWBits
 from adafruit_emc2101 import emc2101_regs
-from adafruit_emc2101 import EMC2101
+from adafruit_emc2101 import EMC2101, EMC2101BadValueException
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
@@ -189,6 +189,27 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
     :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
     """
 
+    _queue = RWBit(emc2101_regs.REG_CONFIG, 0)
+    """If set, select whether one (0) or three (0) consecutive over-temp
+    readings are required for the Alert & Status bits to signal an error."""
+    _tcrit_override = RWBit(emc2101_regs.REG_CONFIG, 1)
+    """If set, permits the tcrit limit to be changed. The limit can only be
+    changed once per power-cycle."""
+
+    # In base class:
+    # _tach_mode_enable = RWBit(REG_CONFIG, 2)
+    # _dac_output_enabled = RWBit(REG_CONFIG, 4)
+    # not exposed:
+    # _disable_i2c_to = RWBit(REG_CONFIG, 3)
+
+    _fan_standby = RWBit(emc2101_regs.REG_CONFIG, 5)
+    """Select whether the fan output is driven when the device is put into
+    standby mode."""
+    _standby = RWBit(emc2101_regs.REG_CONFIG, 6)
+    """Selects the operational mode; if 0 (default) temperatures are monitored
+    and the fan output driven. If 1, temperatures are not monitored and the
+    fan may be disabled (depends on _fan_standby)."""
+
     _int_temp_limit = UnaryStruct(emc2101_regs.INT_TEMP_HI_LIM, "<B")
     """Device internal temperature limit. If temperature is higher than this
     the ALERT actions are taken."""
@@ -221,17 +242,30 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
     """Beta compensation setting. When using diode-connected transistor,
     disable with value of 0x7. Otherwise, bit 3 enables autodetection."""
 
-    _fan_clk_sel = RWBit(emc2101_regs.FAN_CONFIG, 3)
-    """Select base clock used to determine pwm frequency, default 0 is 360KHz,
-    and 1 is 1.4KHz."""
+    # not exposed: tach = RWBits(2, FAN_CONFIG, 0)
     _fan_clk_ovr = RWBit(emc2101_regs.FAN_CONFIG, 2)
     """Enable override of clk_sel to use pwm_freq_div register to determine
     the pwm frequency."""
+    _fan_clk_sel = RWBit(emc2101_regs.FAN_CONFIG, 3)
+    """Select base clock used to determine pwm frequency, default 0 is 360KHz,
+    and 1 is 1.4KHz."""
+    # In base class:
+    # invert_fan_output = RWBit(FAN_CONFIG, 4)
+    _fan_lut_prog = RWBit(emc2101_regs.FAN_CONFIG, 5)
+    # In base class:
+    # forced_temp_enabled = RWBit(FAN_CONFIG, 6)
 
     _avg_filter = RWBits(2, emc2101_regs.AVG_FILTER, 1)
-    """Set the filtering options. """
+    """Set the level of digital averaging used for temp measurements.
+    0: none, 1: 1 sample, 2: 3 samples."""
     _alert_comp = RWBit(emc2101_regs.AVG_FILTER, 0)
-    """Set alert options. """
+    """Set use of Alert/Tach pin, either as interrupt, or as a temperature
+    comparator. See Datasheet section 5.4 for details."""
+
+    _auto_check_status = True
+    """Enable checking status register before many operations. Slows other
+    uses down but useful to catch limit or overtemp alerts. checks can also
+    be made by calling check_status(). Default: ON"""
 
     def __init__(self, i2c_bus):
         super().__init__(i2c_bus)
@@ -239,32 +273,40 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
 
     def initialize(self):
         """Reset the controller to an initial default configuration"""
-        self.extended_api = True
+        self._auto_check_status = True
         super().initialize()
+
+    def _check_status(self):
+        if self._auto_check_status:
+            self.check_status()
 
     @property
     def dev_temp_critical_limit(self):
         """The critical temperature limit for the device (measured by internal
         sensor), in degrees."""
+        self._check_status()
         return self._tcrit_limit
 
     @property
     def dev_temp_critical_hysteresis(self):
         """The critical temperature hysteresis for the device (measured by
         internal sensor), in degrees."""
+        self._check_status()
         return self._tcrit_hyst
 
     @dev_temp_critical_hysteresis.setter
     def dev_temp_critical_hysteresis(self, hysteresis):
         """The critical temperature hysteresis for the device (measured by
         internal sensor), in degrees (1..10)."""
-        if hysteresis not in range(1, 10):
+        if not 0 <= hysteresis <= 10:
             raise AttributeError("dev_temp_critical_hysteresis must be from 1..10")
+        self._check_status()
         self._tcrit_hyst = hysteresis
 
     @property
     def dev_temp_high_limit(self):
         """The high limit temperature for the internal sensor, in degrees."""
+        self._check_status()
         return self._int_temp_limit
 
     @dev_temp_high_limit.setter
@@ -272,26 +314,32 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         """The high limit temperature for the internal sensor, in
         degrees (0..85)."""
         # Device specced from 0C to 85C
-        if temp not in range(0, 85):
+        if not 0 <= temp <= 85:
             raise AttributeError("dev_temp_high_limit must be from 0..85")
+        self._check_status()
         self._int_temp_limit = temp
 
     @property
     def external_temp_low_limit(self):
         """The low limit temperature for the external sensor."""
+        self._check_status()
         # No ordering restrictions here.
         temp_lsb = self._ext_temp_lo_limit_lsb
         temp_msb = self._ext_temp_lo_limit_msb
         temp = (temp_msb << 8) | (temp_lsb & 0xE0)
         temp >>= 5
         temp *= 0.125
+        if not -64 <= temp <= 127:
+            raise EMC2101BadValueException()
         return temp
 
     @external_temp_low_limit.setter
     def external_temp_low_limit(self, temp: float):
         """Set low limit temperature for the external sensor."""
-        if temp not in range(-40, 100):
-            raise AttributeError("dev_temp_high_limit must be from -40..100")
+        if not -64 <= temp <= 127:
+            raise AttributeError("dev_temp_high_limit must be from -64..127")
+
+        self._check_status()
         # Multiply by 8 to get 3 bits of fraction within the integer.
         temp *= 8.0
         temp = int(temp)
@@ -308,6 +356,8 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
     @property
     def external_temp_high_limit(self):
         """The high limit temperature for the external sensor."""
+        self._check_status()
+
         # No ordering restrictions here.
         temp_lsb = self._ext_temp_hi_limit_lsb
         temp_msb = self._ext_temp_hi_limit_msb
@@ -315,11 +365,15 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         full_tmp = (temp_msb << 8) | (temp_lsb & 0xE0)
         full_tmp >>= 5
         full_tmp *= 0.125
+        if not -64 <= full_tmp <= 127:
+            raise EMC2101BadValueException()
         return full_tmp
 
     @external_temp_high_limit.setter
     def external_temp_high_limit(self, temp: float):
         """Set high limit temperature for the external sensor."""
+        self._check_status()
+
         # Multiply by 8 to get 3 bits of fraction.
         temp *= 8.0
         temp = int(temp)
@@ -358,6 +412,7 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
         self.lut_enabled = True
         self._fan_clk_ovr = True
         super().initialize()
+        self._check_status()
 
     def set_pwm_clock(self, use_preset=False, use_slow=False):
         """
@@ -382,40 +437,48 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
         if not isinstance(use_slow, bool):
             raise AttributeError("use_slow_pwm must be given a bool")
 
+        self._check_status()
         self._fan_clk_ovr = not use_preset
         self._fan_clk_sel = use_slow
 
     @property
     def pwm_frequency(self):
         """Selects the base clock frequency used for the fan PWM output"""
+        self._check_status()
         return self._pwm_freq
 
     @pwm_frequency.setter
     def pwm_frequency(self, value):
-        if value < 0 or value > 0x1F:
+        if not 0 <= value < 32:
             raise AttributeError("pwm_frequency must be from 0-31")
+        self._check_status()
         self._pwm_freq = value
         self._calculate_full_speed(pwm_f=value)
 
     @property
     def pwm_frequency_divisor(self):
         """The Divisor applied to the PWM frequency to set the final frequency"""
+        self._check_status()
         return self._pwm_freq_div
 
     @pwm_frequency_divisor.setter
     def pwm_frequency_divisor(self, divisor):
-        if divisor < 0 or divisor > 255:
+        if not 0 <= divisor <= 255:
             raise AttributeError("pwm_frequency_divisor must be from 0-255")
+        self._check_status()
         self._pwm_freq_div = divisor
 
     @property
     def lut_enabled(self):
         """Enable or disable the internal look up table used to map a given temperature
-        to a fan speed. When the LUT is disabled fan speed can be changed with `manual_fan_speed`"""
+        to a fan speed. When the LUT is disabled fan speed can be changed with
+        `manual_fan_speed`"""
+        self._check_status()
         return not self._fan_lut_prog
 
     @lut_enabled.setter
     def lut_enabled(self, enable_lut):
+        self._check_status()
         self._fan_lut_prog = not enable_lut
 
     @property

@@ -34,18 +34,40 @@ Implementation Notes
 
 from micropython import const
 
-MFG_ID_SMSC = 0x5D
-PART_ID_EMC2101 = 0x16
-PART_ID_EMC2101R = 0x28
+MFG_ID_SMSC = const(0x5D)
+PART_ID_EMC2101 = const(0x16)
+PART_ID_EMC2101R = const(0x28)
 
 I2C_ADDR = const(0x4C)
 
-MAX_LUT_SPEED = 0x3F  # 6-bit value
-MAX_LUT_TEMP = 0x7F  # 7-bit
+MAX_LUT_SPEED = const(0x3F)  # 6-bit value
+MAX_LUT_TEMP = const(0x7F)  # 7-bit
+
+# Bits in device status register for masks etc.
+STATUS_BUSY = const(0x80)
+STATUS_INTHIGH = const(0x40)
+STATUS_EEPROM = const(0x20)
+STATUS_EXTHIGH = const(0x10)
+STATUS_EXTLOW = const(0x08)
+STATUS_FAULT = const(0x04)
+STATUS_TCRIT = const(0x02)
+STATUS_TACH = const(0x01)
+
+STATUS_ALERT = STATUS_TACH |STATUS_TCRIT |STATUS_FAULT |STATUS_EXTLOW |STATUS_EXTHIGH  |STATUS_INTHIGH 
+
+# Bits in device configuration register for masks etc.
+CONFIG_MASK = const(0x80)
+CONFIG_STANDBY = const(0x40)
+CONFIG_FAN_STANDBY = const(0x20)
+CONFIG_DAC = const(0x10)
+CONFIG_DIS_TO = const(0x08)
+CONFIG_ALT_TACH = const(0x04)
+CONFIG_TCRIT_OVR = const(0x02)
+CONFIG_QUEUE = const(0x01)
 
 # Values of external temp register for fault conditions.
-TEMP_FAULT_OPENCIRCUIT = 0x3F8
-TEMP_FAULT_SHORT = 0x3FF
+TEMP_FAULT_OPENCIRCUIT = const(0x3F8)
+TEMP_FAULT_SHORT = const(0x3FF)
 
 # See datasheet section 6.14:
 FAN_RPM_DIVISOR = const(5400000)

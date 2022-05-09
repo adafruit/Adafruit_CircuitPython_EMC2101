@@ -114,6 +114,26 @@ SpinupTime.add_values(
 )
 
 
+class EMC2101Exception(Exception):
+    """Base class for exceptions raised by EMC2101 class."""
+
+class EMC2101NotFoundException(EMC2101Exception):
+    """Exception for no EMC chip found on I2C bus."""
+
+class EMC2101LimitsException(EMC2101Exception):
+    """Exception for detected temperature limit exceeded condition. Check
+    the status register for details."""
+
+class EMC2101OpenCircuitException(EMC2101Exception):
+    """Exception for external temperature sensor open circuit fault."""
+
+class EMC2101ShortCircuitException(EMC2101Exception):
+    """Exception for external temperature sensor short circuit fault."""
+
+class EMC2101BadValueException(EMC2101Exception):
+    """Exception for values read from chip registers that should not happen."""
+
+
 class EMC2101:  # pylint: disable=too-many-instance-attributes
     """Basic driver for the EMC2101 Fan Controller.
 
@@ -154,10 +174,6 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     Datasheet: https://ww1.microchip.com/downloads/en/DeviceDoc/2101.pdf
     """
 
-    _sensorfault_exceptions = True
-    """If True, sensor faults for the external sensor are reported as an
-    exception."""
-
     _part_id = ROUnaryStruct(emc2101_regs.REG_PARTID, "<B")
     """Device Part ID field value, see also _part_rev and _part_id."""
     _mfg_id = ROUnaryStruct(emc2101_regs.REG_MFGID, "<B")
@@ -165,6 +181,11 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     _part_rev = ROUnaryStruct(emc2101_regs.REG_REV, "<B")
     """Device Part revision field value, see also _mfg_id and _part_id."""
     _int_temp = ROUnaryStruct(emc2101_regs.INTERNAL_TEMP, "<b")
+
+    _status = ROUnaryStruct(emc2101_regs.REG_STATUS, "<B")
+    """Device status register. Read only. See STATUS_* constants."""
+    _config = UnaryStruct(emc2101_regs.REG_CONFIG, "<B")
+    """Device config register. See CONFIG_* constants."""
 
     # Some of these registers are defined as two halves because the chip does
     # not support multi-byte reads or writes, and there is currently no way to
@@ -181,7 +202,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     # IMPORTANT!
     # The Msbyte is shadow-copied when Lsbyte is read, so read Lsbyte first to
-    #     avoid risk of bad reads. See datasheet section 6.1 Data Read Interlock.
+    #     avoid bad reads. See datasheet section 6.1 Data Read Interlock.
     _tach_read_lsb = ROUnaryStruct(emc2101_regs.TACH_LSB, "<B")
     """LS byte of the tachometer result reading. """
     _tach_read_msb = ROUnaryStruct(emc2101_regs.TACH_MSB, "<B")
@@ -199,6 +220,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     `forced_temp_enabled` is set. This can be used to test the behavior of the
     LUT without real temperature changes. Force Temp is 7-bit + sign (one's
     complement?)."""
+    # public for back-compat reasons only.
     forced_temp_enabled = RWBit(emc2101_regs.FAN_CONFIG, 6)
     """When True, the external temperature measurement will always be read as
     the value in `forced_ext_temp`. Not applicable if LUT disabled."""
@@ -212,6 +234,10 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     _pwm_freq_div = UnaryStruct(emc2101_regs.PWM_FREQ_DIV, "<B")
     """Fan/PWM frequency divisor register. Controls source frequency for the
     pwm_freq register."""
+    # public for back-compat reasons only.
+    invert_fan_output = RWBit(emc2101_regs.FAN_CONFIG, 4)
+    """When set to True, the magnitude of the fan output signal is inverted, making 0 the maximum
+    value and 100 the minimum value"""
     _fan_lut_prog = RWBit(emc2101_regs.FAN_CONFIG, 5)
     """Programming-enable (write-enable) bit for the LUT registers."""
 
@@ -238,21 +264,19 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     """Set the time the fan drive stays in spin_up, from 0 to 3.2 sec."""
     _spin_tach_limit = RWBit(emc2101_regs.FAN_SPINUP, 5)
     """Set whether spin-up is aborted if measured speed is lower than the limit.
-    Ignored unless REG_CONFIG bit 3 (alt_tach) is 1.
-    """
+    Ignored unless _tach_mode_enable is 1."""
 
     def __init__(self, i2c_bus):
         # These devices don't ship with any other address.
         self.i2c_device = i2cdevice.I2CDevice(i2c_bus, emc2101_regs.I2C_ADDR)
-
         if (
             not self._part_id
             in [emc2101_regs.PART_ID_EMC2101, emc2101_regs.PART_ID_EMC2101R]
             or self._mfg_id != emc2101_regs.MFG_ID_SMSC
         ):
-            raise AttributeError("Cannot find a EMC2101")
+            raise EMC2101NotFoundException("Cannot find a EMC2101")
+            # raise AttributeError("Cannot find a EMC2101")
 
-        self._sensorfault_exceptions = True
         self._full_speed_lsb = None  # See _calculate_full_speed().
         self.initialize()
 
@@ -263,31 +287,45 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._spin_tach_limit = False
         self._calculate_full_speed()
 
+    def check_status(self):
+        """Read the status register and check for a fault indicated."""
+        if self._status & emc2101_regs.STATUS_ALERT:
+            raise EMC2101LimitsException()
+
     @property
     def part_info(self):
         """The part information: manufacturer, part id and revision. Normally (0x5d, 0x16, 0x1)"""
         return (self._mfg_id, self._part_id, self._part_rev)
 
     @property
+    def devconfig(self):
+        """Read device config register."""
+        return self._config
+
+    @property
+    def devstatus(self):
+        """Read device status register."""
+        return self._status
+
+    @property
     def internal_temperature(self):
         """The temperature as measured by the EMC2101's internal 8-bit temperature sensor"""
+        self.check_status()
         return self._int_temp
 
     @property
     def external_temperature(self):
         """The temperature measured using the external diode"""
 
+        self.check_status()
         temp_lsb = self._ext_temp_lsb
         temp_msb = self._ext_temp_msb
         full_tmp = (temp_msb << 8) | temp_lsb
         full_tmp >>= 5
-        if full_tmp in (
-            emc2101_regs.TEMP_FAULT_OPENCIRCUIT,
-            emc2101_regs.TEMP_FAULT_SHORT,
-        ):
-            if self._sensorfault_exceptions:
-                raise ValueError("External Sensor fault")
-            return int(full_tmp)
+        if full_tmp == emc2101_regs.TEMP_FAULT_OPENCIRCUIT:
+            raise EMC2101OpenCircuitException()
+        if full_tmp == emc2101_regs.TEMP_FAULT_SHORT:
+            raise EMC2101ShortCircuitException()
 
         full_tmp *= 0.125
         return float(full_tmp)
@@ -295,10 +333,12 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     @property
     def fan_speed(self):
         """The current speed in Revolutions per Minute (RPM)"""
+        self.check_status()
+
         val = self._tach_read_lsb
         val |= self._tach_read_msb << 8
         if val < 1:
-            return 0
+            raise EMC2101BadValueException()
         return round(emc2101_regs.FAN_RPM_DIVISOR / val, 2)
 
     def _calculate_full_speed(self, pwm_f=None, dac=None):
@@ -330,12 +370,12 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         raw_setting = self._fan_setting & emc2101_regs.MAX_LUT_SPEED
         fan_speed = self._full_speed_lsb
         if fan_speed < 1:
-            return 0
-        return (raw_setting / fan_speed) * 100
+            raise EMC2101BadValueException()
+        return (raw_setting / fan_speed) * 100.0
 
     @manual_fan_speed.setter
     def manual_fan_speed(self, fan_speed):
-        if fan_speed not in range(0, 101):
+        if not 0 <= fan_speed <= 100:
             raise AttributeError("manual_fan_speed must be from 0-100")
 
         fan_speed_lsb = self._speed_to_lsb(fan_speed)
@@ -356,8 +396,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     def dac_output_enabled(self, value):
         """When set, the fan control signal is output as a DC voltage instead of a PWM signal.
         Be aware that the DAC output very likely requires different hardware to the PWM output.
-        See datasheet and examples for info.
-        """
+        See datasheet and examples for info."""
         self._dac_output_enabled = value
         self._calculate_full_speed(dac=value)
 
@@ -368,8 +407,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
         When the LUT is disabled (the default), fan speed can be changed with
         `manual_fan_speed`.  To actually set this to True and modify the LUT,
-        you need to use the extended version of this driver, :class:`emc2101_lut.EMC2101_LUT`
-        """
+        you need to use the extended version of this driver, :class:`emc2101_lut.EMC2101_LUT`."""
         return not self._fan_lut_prog
 
     @property
@@ -380,16 +418,16 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         high = self._tach_limit_msb
         limit = high << 8 | low
         if limit < 1:
-            return 0
-        return emc2101_regs.FAN_RPM_DIVISOR / limit
+            raise EMC2101BadValueException()
+        return round(emc2101_regs.FAN_RPM_DIVISOR / limit, 2)
 
     @tach_limit.setter
     def tach_limit(self, new_limit):
         """Set the speed limiter on the fan PWM signal. The value of 15000 is
         arbitrary, but very few fans run faster than this.
         """
-        if not 1 <= new_limit <= 14000:
-            raise AttributeError("tach_limit must be from 1-14000")
+        if not 1 <= new_limit <= 15000:
+            raise AttributeError("tach_limit must be from 1-15000")
         num = int(emc2101_regs.FAN_RPM_DIVISOR / new_limit)
         self._tach_limit_lsb = num & 0xFF
         self._tach_limit_msb = (num >> 8) & 0xFF
