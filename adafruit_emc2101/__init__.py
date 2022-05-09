@@ -244,7 +244,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     def __init__(self, i2c_bus):
         # These devices don't ship with any other address.
-        self.i2c_device = i2cdevice.I2CDevice(i2c_bus, emc2101_regs._I2C_ADDR)
+        self.i2c_device = i2cdevice.I2CDevice(i2c_bus, emc2101_regs.I2C_ADDR)
 
         if (
             not self._part_id in [emc2101_regs.PART_ID_EMC2101, emc2101_regs.PART_ID_EMC2101R]
@@ -281,13 +281,12 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         temp_msb = self._ext_temp_msb
         full_tmp = (temp_msb << 8) | temp_lsb
         full_tmp >>= 5
-        if full_tmp == emc2101_regs.TEMP_FAULT_OPENCIRCUIT or full_tmp == emc2101_regs.TEMP_FAULT_SHORT:
+        if full_tmp in (emc2101_regs.TEMP_FAULT_OPENCIRCUIT, emc2101_regs.TEMP_FAULT_SHORT):
             if self._sensorfault_exceptions:
                 raise ValueError("External Sensor fault")
-            else:
-                return int(full_tmp)
-        else:
-            full_tmp *= 0.125
+            return int(full_tmp)
+
+        full_tmp *= 0.125
         return float(full_tmp)
 
     @property
@@ -297,7 +296,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         val |= self._tach_read_msb << 8
         if val < 1:
             return 0
-        return round(emc2101_regs._FAN_RPM_DIVISOR / val, 2)
+        return round(emc2101_regs.FAN_RPM_DIVISOR / val, 2)
 
     def _calculate_full_speed(self, pwm_f=None, dac=None):
         """Determine the LSB value for a 100% fan setting"""
@@ -326,10 +325,10 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         given as the fan's PWM duty cycle represented as a float percentage.
         The value roughly approximates the percentage of the fan's maximum speed"""
         raw_setting = self._fan_setting & emc2101_regs.MAX_LUT_SPEED
-        fs = self._full_speed_lsb
-        if fs < 1:
+        fan_speed = self._full_speed_lsb
+        if fan_speed < 1:
             return 0
-        return (raw_setting / fs) * 100
+        return (raw_setting / fan_speed) * 100
 
     @manual_fan_speed.setter
     def manual_fan_speed(self, fan_speed):
@@ -377,10 +376,9 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         low = self._tach_limit_lsb
         high = self._tach_limit_msb
         limit = high << 8 | low
-        if limit < 2:
-            print("read tach limit 0")
+        if limit < 1:
             return 0
-        return emc2101_regs._FAN_RPM_DIVISOR / limit
+        return emc2101_regs.FAN_RPM_DIVISOR / limit
 
     @tach_limit.setter
     def tach_limit(self, new_limit):
@@ -389,7 +387,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         """
         if not 1 <= new_limit <= 14000:
             raise AttributeError("tach_limit must be from 1-14000")
-        num = int(emc2101_regs._FAN_RPM_DIVISOR / new_limit)
+        num = int(emc2101_regs.FAN_RPM_DIVISOR / new_limit)
         self._tach_limit_lsb = num & 0xFF
         self._tach_limit_msb = (num >> 8) & 0xFF
 

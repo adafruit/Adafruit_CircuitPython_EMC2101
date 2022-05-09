@@ -82,7 +82,7 @@ class FanSpeedLUT:
         return self
 
     # 'with' wrapper
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, typ, val, tbk):
         """ 'with' wrapper: defer lut update until end of 'with'
         so update_lut work can be done just once at the end of
         setting the LUT.
@@ -147,7 +147,6 @@ class FanSpeedLUT:
     # temperature first
 
     def _update_lut(self):
-        print("_update_lut")
         # Make sure we're not going to try to set more entries than we have slots
         if len(self.lut_values) > 8:
             raise AttributeError("LUT can only contain a maximum of 8 items")
