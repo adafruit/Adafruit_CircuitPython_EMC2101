@@ -41,11 +41,11 @@ PART_ID_EMC2101R = 0x28
 I2C_ADDR = const(0x4C)
 
 MAX_LUT_SPEED = 0x3F  # 6-bit value
-MAX_LUT_TEMP  = 0x7F  # 7-bit
+MAX_LUT_TEMP = 0x7F  # 7-bit
 
 # Values of external temp register for fault conditions.
-TEMP_FAULT_OPENCIRCUIT = 0x3f8
-TEMP_FAULT_SHORT       = 0x3ff
+TEMP_FAULT_OPENCIRCUIT = 0x3F8
+TEMP_FAULT_SHORT = 0x3FF
 
 # See datasheet section 6.14:
 FAN_RPM_DIVISOR = const(5400000)

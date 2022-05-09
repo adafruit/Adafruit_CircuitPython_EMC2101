@@ -247,7 +247,8 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self.i2c_device = i2cdevice.I2CDevice(i2c_bus, emc2101_regs.I2C_ADDR)
 
         if (
-            not self._part_id in [emc2101_regs.PART_ID_EMC2101, emc2101_regs.PART_ID_EMC2101R]
+            not self._part_id
+            in [emc2101_regs.PART_ID_EMC2101, emc2101_regs.PART_ID_EMC2101R]
             or self._mfg_id != emc2101_regs.MFG_ID_SMSC
         ):
             raise AttributeError("Cannot find a EMC2101")
@@ -281,7 +282,10 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         temp_msb = self._ext_temp_msb
         full_tmp = (temp_msb << 8) | temp_lsb
         full_tmp >>= 5
-        if full_tmp in (emc2101_regs.TEMP_FAULT_OPENCIRCUIT, emc2101_regs.TEMP_FAULT_SHORT):
+        if full_tmp in (
+            emc2101_regs.TEMP_FAULT_OPENCIRCUIT,
+            emc2101_regs.TEMP_FAULT_SHORT,
+        ):
             if self._sensorfault_exceptions:
                 raise ValueError("External Sensor fault")
             return int(full_tmp)
