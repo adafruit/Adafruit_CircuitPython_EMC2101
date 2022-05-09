@@ -38,7 +38,7 @@ MFG_ID_SMSC = 0x5D
 PART_ID_EMC2101 = 0x16
 PART_ID_EMC2101R = 0x28
 
-_I2C_ADDR = const(0x4C)
+I2C_ADDR = const(0x4C)
 
 MAX_LUT_SPEED = 0x3F  # 6-bit value
 MAX_LUT_TEMP  = 0x7F  # 7-bit
@@ -48,7 +48,7 @@ TEMP_FAULT_OPENCIRCUIT = 0x3f8
 TEMP_FAULT_SHORT       = 0x3ff
 
 # See datasheet section 6.14:
-_FAN_RPM_DIVISOR = const(5400000)
+FAN_RPM_DIVISOR = const(5400000)
 
 #
 # EMC2101 Register Addresses
