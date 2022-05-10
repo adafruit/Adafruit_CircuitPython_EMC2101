@@ -114,31 +114,6 @@ SpinupTime.add_values(
 )
 
 
-class EMC2101Exception(Exception):
-    """Base class for exceptions raised by EMC2101 class."""
-
-
-class EMC2101NotFoundException(EMC2101Exception):
-    """Exception for no EMC chip found on I2C bus."""
-
-
-class EMC2101LimitsException(EMC2101Exception):
-    """Exception for detected temperature limit exceeded condition. Check
-    the status register for details."""
-
-
-class EMC2101OpenCircuitException(EMC2101Exception):
-    """Exception for external temperature sensor open circuit fault."""
-
-
-class EMC2101ShortCircuitException(EMC2101Exception):
-    """Exception for external temperature sensor short circuit fault."""
-
-
-class EMC2101BadValueException(EMC2101Exception):
-    """Exception for values read from chip registers that should not happen."""
-
-
 class EMC2101:  # pylint: disable=too-many-instance-attributes
     """Basic driver for the EMC2101 Fan Controller.
 
@@ -279,8 +254,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
             in [emc2101_regs.PART_ID_EMC2101, emc2101_regs.PART_ID_EMC2101R]
             or self._mfg_id != emc2101_regs.MFG_ID_SMSC
         ):
-            raise EMC2101NotFoundException("Cannot find a EMC2101")
-            # raise ValueError("Cannot find a EMC2101")
+            raise RuntimeError("Cannot find a EMC2101")
 
         self._full_speed_lsb = None  # See _calculate_full_speed().
         self.initialize()
@@ -295,7 +269,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     def check_status(self):
         """Read the status register and check for a fault indicated."""
         if self._status & emc2101_regs.STATUS_ALERT:
-            raise EMC2101LimitsException()
+            raise ValueError("Status alert")
 
     @property
     def part_info(self):
@@ -328,9 +302,9 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         full_tmp = (temp_msb << 8) | temp_lsb
         full_tmp >>= 5
         if full_tmp == emc2101_regs.TEMP_FAULT_OPENCIRCUIT:
-            raise EMC2101OpenCircuitException()
+            raise ValueError("Open circuit")
         if full_tmp == emc2101_regs.TEMP_FAULT_SHORT:
-            raise EMC2101ShortCircuitException()
+            raise ValueError("Short circuit")
 
         full_tmp *= 0.125
         return float(full_tmp)
@@ -343,7 +317,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         val = self._tach_read_lsb
         val |= self._tach_read_msb << 8
         if val < 1:
-            raise EMC2101BadValueException()
+            raise RuntimeError("Connection")
         return round(emc2101_regs.FAN_RPM_DIVISOR / val, 2)
 
     def _calculate_full_speed(self, pwm_f=None, dac=None):
@@ -375,7 +349,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         raw_setting = self._fan_setting & emc2101_regs.MAX_LUT_SPEED
         fan_speed = self._full_speed_lsb
         if fan_speed < 1:
-            raise EMC2101BadValueException()
+            raise RuntimeError("Connection")
         return (raw_setting / fan_speed) * 100.0
 
     @manual_fan_speed.setter
@@ -423,7 +397,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         high = self._tach_limit_msb
         limit = high << 8 | low
         if limit < 1:
-            raise EMC2101BadValueException()
+            raise RuntimeError("Connection")
         return round(emc2101_regs.FAN_RPM_DIVISOR / limit, 2)
 
     @tach_limit.setter
