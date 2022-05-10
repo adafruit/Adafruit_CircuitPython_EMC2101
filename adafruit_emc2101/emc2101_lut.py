@@ -39,7 +39,7 @@ from adafruit_register.i2c_struct import UnaryStruct
 from adafruit_register.i2c_bit import RWBit
 from adafruit_register.i2c_bits import RWBits
 from adafruit_emc2101 import emc2101_regs
-from adafruit_emc2101 import EMC2101, EMC2101BadValueException
+from adafruit_emc2101 import EMC2101
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
@@ -330,7 +330,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         temp >>= 5
         temp *= 0.125
         if not -64 <= temp <= 127:
-            raise EMC2101BadValueException()
+            raise RuntimeError("Connection")
         return temp
 
     @external_temp_low_limit.setter
@@ -366,7 +366,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         full_tmp >>= 5
         full_tmp *= 0.125
         if not -64 <= full_tmp <= 127:
-            raise EMC2101BadValueException()
+            raise RuntimeError("Connection")
         return full_tmp
 
     @external_temp_high_limit.setter
