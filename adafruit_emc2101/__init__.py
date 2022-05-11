@@ -41,6 +41,7 @@ from adafruit_emc2101 import emc2101_regs
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 
+
 class CV:
     """struct helper"""
 
@@ -301,9 +302,9 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         full_tmp = (temp_msb << 8) | temp_lsb
         full_tmp >>= 5
         if full_tmp == emc2101_regs.TEMP_FAULT_OPENCIRCUIT:
-            raise ValueError("Open circuit")
+            raise RuntimeError("Open circuit")
         if full_tmp == emc2101_regs.TEMP_FAULT_SHORT:
-            raise ValueError("Short circuit")
+            raise RuntimeError("Short circuit")
 
         full_tmp *= 0.125
         return float(full_tmp)
