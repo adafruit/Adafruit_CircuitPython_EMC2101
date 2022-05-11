@@ -41,7 +41,6 @@ from adafruit_emc2101 import emc2101_regs
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 
-
 class CV:
     """struct helper"""
 
@@ -317,7 +316,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         val = self._tach_read_lsb
         val |= self._tach_read_msb << 8
         if val < 1:
-            raise RuntimeError("Connection")
+            raise OSError("Connection")
         return round(emc2101_regs.FAN_RPM_DIVISOR / val, 2)
 
     def _calculate_full_speed(self, pwm_f=None, dac=None):
@@ -349,7 +348,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         raw_setting = self._fan_setting & emc2101_regs.MAX_LUT_SPEED
         fan_speed = self._full_speed_lsb
         if fan_speed < 1:
-            raise RuntimeError("Connection")
+            raise OSError("Connection")
         return (raw_setting / fan_speed) * 100.0
 
     @manual_fan_speed.setter
@@ -397,7 +396,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         high = self._tach_limit_msb
         limit = high << 8 | low
         if limit < 1:
-            raise RuntimeError("Connection")
+            raise OSError("Connection")
         return round(emc2101_regs.FAN_RPM_DIVISOR / limit, 2)
 
     @tach_limit.setter

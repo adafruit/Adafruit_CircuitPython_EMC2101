@@ -330,7 +330,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         temp >>= 5
         temp *= 0.125
         if not -64 <= temp <= 127:
-            raise RuntimeError("Connection")
+            raise OSError("Connection")
         return temp
 
     @external_temp_low_limit.setter
@@ -366,7 +366,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         full_tmp >>= 5
         full_tmp *= 0.125
         if not -64 <= full_tmp <= 127:
-            raise RuntimeError("Connection")
+            raise OSError("Connection")
         return full_tmp
 
     @external_temp_high_limit.setter
@@ -427,15 +427,15 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
              False: Use the 360kHz clock.
         :type priority: integer or None
         :return: None
-        :raises ValueError: if use_preset is not a `bool`
-        :raises ValueError: if use_slow is not a `bool`
+        :raises TypeError: if use_preset is not a `bool`
+        :raises TypeError: if use_slow is not a `bool`
 
         """
 
         if not isinstance(use_preset, bool):
-            raise ValueError("use_preset must be given a bool")
+            raise TypeError("use_preset must be given a bool")
         if not isinstance(use_slow, bool):
-            raise ValueError("use_slow_pwm must be given a bool")
+            raise TypeError("use_slow_pwm must be given a bool")
 
         self._check_status()
         self._fan_clk_ovr = not use_preset
