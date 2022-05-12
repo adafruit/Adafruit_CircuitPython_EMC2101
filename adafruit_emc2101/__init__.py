@@ -36,82 +36,11 @@ from adafruit_register.i2c_struct import ROUnaryStruct, UnaryStruct
 from adafruit_register.i2c_bit import RWBit
 from adafruit_register.i2c_bits import RWBits
 import adafruit_bus_device.i2c_device as i2cdevice
+
 from adafruit_emc2101 import emc2101_regs
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
-
-
-class CV:
-    """struct helper"""
-
-    @classmethod
-    def add_values(cls, value_tuples):
-        """Creates CV entries"""
-        cls.string = {}
-        cls.lsb = {}
-        for value_tuple in value_tuples:
-            name, value, string, lsb = value_tuple
-            setattr(cls, name, value)
-            cls.string[value] = string
-            cls.lsb[value] = lsb
-
-    @classmethod
-    def is_valid(cls, value):
-        "Returns true if the given value is a member of the CV"
-        return value in cls.string
-
-
-class ConversionRate(CV):
-    """Options for ``accelerometer_data_rate`` and ``gyro_data_rate``"""
-
-
-ConversionRate.add_values(
-    (
-        ("RATE_1_16", 0, str(1 / 16.0), None),
-        ("RATE_1_8", 1, str(1 / 8.0), None),
-        ("RATE_1_4", 2, str(1 / 4.0), None),
-        ("RATE_1_2", 3, str(1 / 2.0), None),
-        ("RATE_1", 4, str(1.0), None),
-        ("RATE_2", 5, str(2.0), None),
-        ("RATE_4", 6, str(4.0), None),
-        ("RATE_8", 7, str(8.0), None),
-        ("RATE_16", 8, str(16.0), None),
-        ("RATE_32", 9, str(32.0), None),
-    )
-)
-
-
-class SpinupDrive(CV):
-    """Options for ``spinup_drive``"""
-
-
-SpinupDrive.add_values(
-    (
-        ("BYPASS", 0, "Disabled", None),
-        ("DRIVE_50", 1, "50% Duty Cycle", None),
-        ("DRIVE_75", 2, "25% Duty Cycle", None),
-        ("DRIVE_100", 3, "100% Duty Cycle", None),
-    )
-)
-
-
-class SpinupTime(CV):
-    """Options for ``spinup_time``"""
-
-
-SpinupTime.add_values(
-    (
-        ("BYPASS", 0, "Disabled", None),
-        ("SPIN_0_05_SEC", 1, "0.05 seconds", None),
-        ("SPIN_0_1_SEC", 2, "0.1 seconds", None),
-        ("SPIN_0_2_SEC", 3, "0.2 seconds", None),
-        ("SPIN_0_4_SEC", 4, "0.4 seconds", None),
-        ("SPIN_0_8_SEC", 5, "0.8 seconds", None),
-        ("SPIN_1_6_SEC", 6, "1.6 seconds", None),
-        ("SPIN_3_2_SEC", 7, "3.2 seconds", None),
-    )
-)
 
 
 class EMC2101:  # pylint: disable=too-many-instance-attributes
@@ -266,37 +195,54 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._spin_tach_limit = False
         self._calculate_full_speed()
 
-    def check_status(self):
-        """Read the status register and check for a fault indicated."""
-        if self._status & emc2101_regs.STATUS_ALERT:
-            raise ValueError("Status alert")
-
     @property
     def part_info(self):
-        """The part information: manufacturer, part id and revision. Normally (0x5d, 0x16, 0x1)"""
+        """The part information: manufacturer, part id and revision.
+        Normally returns (0x5d, 0x16, 0x1).
+        """
         return (self._mfg_id, self._part_id, self._part_rev)
 
     @property
     def devconfig(self):
-        """Read device config register."""
+        """Read the main device config register.
+        See the CONFIG_* bit definitions in the emc2101_regs module, or refer
+        to the datasheet for more detail. Note: this is not the Fan Config
+        register!
+        """
         return self._config
 
     @property
     def devstatus(self):
-        """Read device status register."""
+        """Read device status (alerts) register. See the STATUS_* bit
+        definitions in the emc2101_regs module, or refer to the datasheet for
+        more detail.
+        """
         return self._status
 
     @property
     def internal_temperature(self):
-        """The temperature as measured by the EMC2101's internal 8-bit temperature sensor"""
-        self.check_status()
+        """The temperature as measured by the EMC2101's internal 8-bit
+        temperature sensor, which validly ranges from 0 to 85 and does not
+        support fractions (unlike the external readings).
+
+        :return: int temperature in degrees centigrade.
+        """
         return self._int_temp
 
     @property
     def external_temperature(self):
-        """The temperature measured using the external diode"""
+        """The temperature measured using the external diode. The value is
+        read as a fixed-point 11-bit value ranging from -64 to approx 126,
+        with fractional part of 1/8 degree.
 
-        self.check_status()
+        :return: float temperature in degrees centigrade.
+
+        :raises RuntimeError: if the sensor pind (DP,DN) are open circuit
+            (the sensor is disconnected).
+        :raises RuntimeError: if the external temp sensor is a short circuit
+            (not behaving like a diode).
+        """
+
         temp_lsb = self._ext_temp_lsb
         temp_msb = self._ext_temp_msb
         full_tmp = (temp_msb << 8) | temp_lsb
@@ -311,9 +257,10 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     @property
     def fan_speed(self):
-        """The current speed in Revolutions per Minute (RPM)"""
-        self.check_status()
+        """The current speed in Revolutions per Minute (RPM).
 
+        :return: float fan speed rounded to 2dp.
+        """
         val = self._tach_read_lsb
         val |= self._tach_read_msb << 8
         if val < 1:
@@ -343,9 +290,10 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     @property
     def manual_fan_speed(self):
-        """The fan speed used while the LUT is being updated and is unavailable. The speed is
-        given as the fan's PWM duty cycle represented as a float percentage.
-        The value roughly approximates the percentage of the fan's maximum speed"""
+        """The fan speed used while the LUT is being updated and is unavailable. The
+        speed is given as the fan's PWM duty cycle represented as a float percentage.
+        The value roughly approximates the percentage of the fan's maximum speed.
+        """
         raw_setting = self._fan_setting & emc2101_regs.MAX_LUT_SPEED
         fan_speed = self._full_speed_lsb
         if fan_speed < 1:
@@ -354,6 +302,12 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     @manual_fan_speed.setter
     def manual_fan_speed(self, fan_speed):
+        """The fan speed used while the LUT is being updated and is unavailable. The
+        speed is given as the fan's PWM duty cycle represented as a float percentage.
+        The value roughly approximates the percentage of the fan's maximum speed.
+
+        :raises ValueError: if the fan_speed is not in the valid range
+        """
         if not 0 <= fan_speed <= 100:
             raise ValueError("manual_fan_speed must be from 0-100")
 
@@ -368,14 +322,16 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     @property
     def dac_output_enabled(self):
-        """When set, the fan control signal is output as a DC voltage instead of a PWM signal"""
+        """When set, the fan control signal is output as a DC voltage instead
+        of a PWM signal."""
         return self._dac_output_enabled
 
     @dac_output_enabled.setter
     def dac_output_enabled(self, value):
-        """When set, the fan control signal is output as a DC voltage instead of a PWM signal.
-        Be aware that the DAC output very likely requires different hardware to the PWM output.
-        See datasheet and examples for info."""
+        """When set, the fan control signal is output as a DC voltage instead of
+        a PWM signal.  Be aware that the DAC output very likely requires different
+        hardware to the PWM output.  See datasheet and examples for info.
+        """
         self._dac_output_enabled = value
         self._calculate_full_speed(dac=value)
 
@@ -384,15 +340,20 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         """Enable or disable the internal look up table used to map a given
         temperature to a fan speed.
 
-        When the LUT is disabled (the default), fan speed can be changed with
-        `manual_fan_speed`.  To actually set this to True and modify the LUT,
-        you need to use the extended version of this driver, :class:`emc2101_lut.EMC2101_LUT`."""
+        When the LUT is disabled (the default), fan speed can be changed
+        with `manual_fan_speed`. To actually set this to True and modify
+        the LUT, you need to use the extended version of this driver,
+        :class:`emc2101_lut.EMC2101_LUT`."""
         return not self._fan_lut_prog
 
     @property
     def tach_limit(self):
-        """The maximum /minimum speed expected for the fan"""
+        """The maximum speed expected for the fan. If the fan exceeds this
+        speed, the status register TACH bit will be set.
 
+        :return float: fan speed limit in RPM
+        :raises OSError: if the limit is 0 (not a permitted value)
+        """
         low = self._tach_limit_lsb
         high = self._tach_limit_msb
         limit = high << 8 | low
@@ -402,8 +363,16 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     @tach_limit.setter
     def tach_limit(self, new_limit):
-        """Set the speed limiter on the fan PWM signal. The value of 15000 is
-        arbitrary, but very few fans run faster than this.
+        """Set the speed limiter on the fan PWM signal. The value of
+        15000 is arbitrary, but very few fans run faster than this. If the
+        fan exceeds this speed, the status register TACH bit will be set.
+
+        Note that the device will _not_ automatically adjust the PWM speed to
+        enforce this limit.
+
+        :param new_limit: fan speed limit in RPM
+        :raises OSError: if the limit is 0 (not a permitted value)
+        :raises ValueError: if the new_limit is not in the valid range
         """
         if not 1 <= new_limit <= 15000:
             raise ValueError("tach_limit must be from 1-15000")
@@ -413,34 +382,96 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     @property
     def spinup_time(self):
-        """The amount of time the fan will spin at the current set drive strength.
-        Must be a `SpinupTime`"""
+        """The amount of time the fan will spin at the currently set drive
+        strength.
+
+        :return int: corresponding to the SpinupTime enumeration.
+        """
         return self._spin_time
 
     @spinup_time.setter
     def spinup_time(self, spin_time):
+        """Set the time that the SpinupDrive value will be used to get the
+        fan moving before the normal speed controls are activated. This is
+        needed because fan motors typically need a 'kick' to get them moving,
+        but after this they can slow down further.
+
+        Usage:
+        .. code-block:: python
+
+            from adafruit_emc2101_enums import SpinupTime
+            emc.spinup_drive = SpinupTime.SPIN_1_6_SEC
+
+        :raises TypeError: if spin_drive is not an instance of SpinupTime
+        """
+        # Not importing at top level so the SpinupTime is not loaded
+        # unless it is required, and thus 1KB bytecode can be avoided.
+        # pylint: disable=import-outside-toplevel
+        from emc2101_enums import SpinupTime
+
         if not SpinupTime.is_valid(spin_time):
-            raise ValueError("spinup_time must be a SpinupTime")
+            raise TypeError("spinup_time must be a SpinupTime")
         self._spin_time = spin_time
 
     @property
     def spinup_drive(self):
-        """The drive strength of the fan on spinup in % max RPM"""
+        """The drive strength of the fan on spinup in % max PWM duty cycle
+        (which approximates to max fan speed).
+
+        :return int: corresponding to the SpinupDrive enumeration.
+        """
         return self._spin_drive
 
     @spinup_drive.setter
     def spinup_drive(self, spin_drive):
+        """Set the drive (pwm duty percentage) that the SpinupTime value is applied
+        to move the fan before the normal speed controls are activated. This is needed
+        because fan motors typically need a 'kick' to get them moving, but after this
+        they can slow down further.
+
+        Usage:
+        .. code-block:: python
+
+            from adafruit_emc2101_enums import SpinupDrive
+            emc.spinup_drive = SpinupDrive.DRIVE_50
+
+        :raises TypeError: if spin_drive is not an instance of SpinupDrive
+        """
+        # Not importing at top level so the SpinupDrive is not loaded
+        # unless it is required, and thus 1KB bytecode can be avoided.
+        # pylint: disable=import-outside-toplevel
+        from emc2101_enums import SpinupDrive
+
         if not SpinupDrive.is_valid(spin_drive):
-            raise ValueError("spinup_drive must be a SpinupDrive")
+            raise TypeError("spinup_drive must be a SpinupDrive")
         self._spin_drive = spin_drive
 
     @property
     def conversion_rate(self):
-        """The rate at which temperature measurements are taken. Must be a `ConversionRate`"""
+        """The rate at which temperature measurements are taken.
+
+        :return int: corresponding to the ConversionRate enumeration."""
         return self._conversion_rate
 
     @conversion_rate.setter
     def conversion_rate(self, rate):
+        """Set the rate at which the external temperature is checked by
+        by the device. Reducing this rate can reduce power consumption.
+
+        Usage:
+
+        .. code-block:: python
+
+            from adafruit_emc2101_enums import ConversionRate
+            emc.conversion_rate = ConversionRate.RATE_1_2
+
+        :raises TypeError: if spin_drive is not an instance of ConversionRate
+        """
+        # Not importing at top level so the ConversionRate is not loaded
+        # unless it is required, and thus 1KB bytecode can be avoided.
+        # pylint: disable=import-outside-toplevel
+        from emc2101_enums import ConversionRate
+
         if not ConversionRate.is_valid(rate):
             raise ValueError("conversion_rate must be a `ConversionRate`")
         self._conversion_rate = rate
