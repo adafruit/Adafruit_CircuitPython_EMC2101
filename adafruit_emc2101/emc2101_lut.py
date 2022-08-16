@@ -40,7 +40,7 @@ from adafruit_register.i2c_struct import UnaryStruct
 from adafruit_register.i2c_bit import RWBit
 from . import EMC2101, MAX_LUT_SPEED, MAX_LUT_TEMP
 
-__version__ = "0.0.0-auto.0"
+__version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 
 _FAN_CONFIG = const(0x4A)
