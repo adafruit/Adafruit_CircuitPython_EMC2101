@@ -178,12 +178,13 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     def __init__(self, i2c_bus):
         # These devices don't ship with any other address.
         self.i2c_device = i2cdevice.I2CDevice(i2c_bus, emc2101_regs.I2C_ADDR)
-        if (
-            not self._part_id
-            in [emc2101_regs.PART_ID_EMC2101, emc2101_regs.PART_ID_EMC2101R]
-            or self._mfg_id != emc2101_regs.MFG_ID_SMSC
-        ):
-            raise RuntimeError("Cannot find a EMC2101")
+        part = self._part_id
+        mfg = self._mfg_id
+        # print("EMC2101 (part={}.{})".format(part, mfg))
+
+        if (not part in [emc2101_regs.PART_ID_EMC2101, emc2101_regs.PART_ID_EMC2101R]
+            or mfg != emc2101_regs.MFG_ID_SMSC):
+            raise RuntimeError("No EMC2101 (part={}.{})".format(part, mfg))
 
         self._full_speed_lsb = None  # See _calculate_full_speed().
         self.initialize()
