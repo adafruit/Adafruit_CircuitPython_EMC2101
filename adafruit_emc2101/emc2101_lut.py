@@ -40,6 +40,9 @@ import emc2101_regs
 from emc2101_fanspeed import FanSpeedLUT
 from emc2101_ext import EMC2101_EXT
 
+__version__ = "0.0.0+auto.0"
+__repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
+
 
 class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
     """Driver for the EMC2101 Fan Controller, with PWM frequency and temperature

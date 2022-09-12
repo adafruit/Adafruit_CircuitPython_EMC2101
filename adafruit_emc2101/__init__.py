@@ -39,7 +39,7 @@ import adafruit_bus_device.i2c_device as i2cdevice
 
 from adafruit_emc2101 import emc2101_regs
 
-__version__ = "0.0.0-auto.0"
+__version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 
 

@@ -6,6 +6,7 @@
 
 import os
 import sys
+import datetime
 
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("../adafruit_emc2101"))
@@ -55,7 +56,14 @@ master_doc = "index"
 
 # General information about the project.
 project = "Adafruit EMC2101 Library"
-copyright = "2020 Bryan Siepert"
+creation_year = "2020"
+current_year = str(datetime.datetime.now().year)
+year_duration = (
+    current_year
+    if current_year == creation_year
+    else creation_year + " - " + current_year
+)
+copyright = year_duration + " Bryan Siepert"
 author = "Bryan Siepert"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -72,7 +80,7 @@ release = "1.0"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
