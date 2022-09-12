@@ -256,7 +256,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
             raise RuntimeError("Short circuit")
 
         full_tmp *= 0.125
-        return float(full_tmp)
+        return full_tmp
 
     @property
     def fan_speed(self):
