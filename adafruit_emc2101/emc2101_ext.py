@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright (c) 2020 Bryan Siepert for Adafruit Industries
+# SPDX-FileCopyrightText: Copyright (c) 2022 Ruth Ivimey-Cook
+# Derived from work by Bryan Siepert for Adafruit Industries
 #
 # SPDX-License-Identifier: MIT
 """
