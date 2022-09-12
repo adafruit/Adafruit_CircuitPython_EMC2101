@@ -182,8 +182,10 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         mfg = self._mfg_id
         # print("EMC2101 (part={}.{})".format(part, mfg))
 
-        if (not part in [emc2101_regs.PART_ID_EMC2101, emc2101_regs.PART_ID_EMC2101R]
-            or mfg != emc2101_regs.MFG_ID_SMSC):
+        if (
+            not part in [emc2101_regs.PART_ID_EMC2101, emc2101_regs.PART_ID_EMC2101R]
+            or mfg != emc2101_regs.MFG_ID_SMSC
+        ):
             raise RuntimeError("No EMC2101 (part={}.{})".format(part, mfg))
 
         self._full_speed_lsb = None  # See _calculate_full_speed().
