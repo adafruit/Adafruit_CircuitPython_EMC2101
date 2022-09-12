@@ -8,6 +8,17 @@
    :members:
    :exclude-members: CV
 
+.. automodule:: adafruit_emc2101.emc2101_regs
+   :members:
 
 .. automodule:: adafruit_emc2101.emc2101_lut
+   :members:
+
+.. automodule:: adafruit_emc2101.emc2101_fanspeed
+   :members:
+
+.. automodule:: adafruit_emc2101.emc2101_ext
+   :members:
+
+.. automodule:: adafruit_emc2101.emc2101_enums
    :members:

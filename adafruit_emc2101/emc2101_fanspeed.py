@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 """
-`adafruit_emc2101.emc2101_lut`
+`adafruit_emc2101.emc2101_fanspeed`
 ================================================================================
 
 Brushless fan controller: extended functionality

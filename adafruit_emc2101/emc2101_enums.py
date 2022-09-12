@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 """
-`adafruit_emc2101`
+`adafruit_emc2101.emc2101_enums`
 ================================================================================
 
 Brushless fan controller
