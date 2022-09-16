@@ -55,7 +55,7 @@ class FanSpeedLUT:
 
         emc2101.lut[50] = 62
 
-    Set two values up and write to the chip once.
+    Set two values up and write to the chip on exit from 'with' block.
 
     .. code-block:: python
 
@@ -77,12 +77,18 @@ class FanSpeedLUT:
         # returns:
         # { 40: 10, 50: 62 }
 
-    Delete all current LUT values:
+    Delete some LUT values, assign None:
 
     .. code-block:: python
 
         for temp in emc2101.lut.lookup_table:
             emc2101.lut[temp] = None
+
+    Delete all LUT values at once:
+
+    .. code-block:: python
+
+        emc2101.lut.clear()
     """
 
     # 8 (Temperature, Speed) pairs in increasing order
@@ -199,3 +205,8 @@ class FanSpeedLUT:
         """
         self._fan_lut[idx * 2] = bytearray((temp,))
         self._fan_lut[idx * 2 + 1] = bytearray((speed,))
+
+    def clear(self):
+        """Clear all LUT entries."""
+        self.lut_values = {}
+        self._update_lut()
