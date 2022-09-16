@@ -37,9 +37,9 @@ and PWM frequency control to the base feature set.
 
 from adafruit_register.i2c_struct import UnaryStruct
 
-import emc2101_regs
-from emc2101_fanspeed import FanSpeedLUT
-from emc2101_ext import EMC2101_EXT
+from adafruit_emc2101 import emc2101_regs
+from adafruit_emc2101.emc2101_fanspeed import FanSpeedLUT
+from adafruit_emc2101.emc2101_ext import EMC2101_EXT
 
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
