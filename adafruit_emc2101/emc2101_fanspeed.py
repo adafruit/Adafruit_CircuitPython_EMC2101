@@ -87,10 +87,10 @@ class FanSpeedLUT:
 
     # 8 (Temperature, Speed) pairs in increasing order
     _fan_lut = StructArray(emc2101_regs.LUT_BASE, "<B", 16)
-    _defer_update = 0
+    _defer_update = False
 
     def __init__(self, fan_obj):
-        self._defer_update = 0
+        self._defer_update = False
         self.emc_fan = fan_obj
         self.lut_values = {}
         self.i2c_device = fan_obj.i2c_device
@@ -101,7 +101,7 @@ class FanSpeedLUT:
 
         """
         # Use increment/decrement so nested with's are dealt with properly.
-        self._defer_update += 1
+        self._defer_update = True
         return self
 
     # 'with' wrapper
@@ -109,9 +109,8 @@ class FanSpeedLUT:
         """'with' wrapper: defer lut update until end of 'with' so
         update_lut work can be done just once at the end of setting the LUT.
         """
-        self._defer_update -= 1
-        if self._defer_update == 0:
-            self._update_lut()
+        self._defer_update = False
+        self._update_lut()
 
     def __getitem__(self, index):
         if not isinstance(index, int):
@@ -131,7 +130,8 @@ class FanSpeedLUT:
             raise ValueError("LUT values must be a fan speed from 0-100%")
         else:
             self.lut_values[index] = value
-        if self._defer_update == 0:
+
+        if not self._defer_update:
             self._update_lut()
 
     def __repr__(self):
@@ -192,7 +192,6 @@ class FanSpeedLUT:
                 idx, emc2101_regs.MAX_LUT_TEMP, emc2101_regs.MAX_LUT_SPEED
             )
         self.emc_fan.lut_enabled = current_mode
-        self._defer_update = 0
 
     def _set_lut_entry(self, idx, temp, speed):
         """Internal function: add a value to the local LUT as a byte array,
