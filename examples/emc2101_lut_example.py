@@ -6,6 +6,7 @@ import board
 from adafruit_emc2101.emc2101_lut import EMC2101_LUT as EMC2101
 
 i2c = board.I2C()  # uses board.SCL and board.SDA
+# i2c = board.STEMMA_I2C()  # For using the built-in STEMMA QT connector on a microcontroller
 
 FAN_MAX_RPM = 1700
 emc = EMC2101(i2c)
