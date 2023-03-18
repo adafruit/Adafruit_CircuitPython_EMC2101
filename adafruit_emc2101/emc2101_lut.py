@@ -77,7 +77,6 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
         self.lut_enabled = True
         # pylint: disable=attribute-defined-outside-init
         self._fan_clk_ovr = True
-        super().initialize()
         self._check_status()
 
     def set_pwm_clock(self, use_preset=False, use_slow=False):

@@ -139,13 +139,13 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
 
     def __init__(self, i2c_bus):
         super().__init__(i2c_bus)
-        self.initialize()
 
-    def initialize(self):
+        self.emc2101_ext_initialize()
+
+    def emc2101_ext_initialize(self):
         """Reset the controller to an initial default configuration."""
         self.auto_check_status = False
         self._last_status = 0
-        super().initialize()
 
     def _check_status(self):
         if self.auto_check_status:
@@ -201,7 +201,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         :return: int temperature in degrees centigrade.
         """
         self._check_status()
-        return super().internal_temperature
+        return self._get_internal_temperature()
 
     @property
     def external_temperature(self):
@@ -218,7 +218,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
             (not behaving like a diode).
         """
         self._check_status()
-        return super().external_temperature
+        return self._get_external_temperature()
 
     @property
     def fan_speed(self):
@@ -227,7 +227,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         :return: float speed in RPM.
         """
         self._check_status()
-        return super().fan_speed
+        return self._get_fan_speed()
 
     @property
     def dev_temp_critical_limit(self):

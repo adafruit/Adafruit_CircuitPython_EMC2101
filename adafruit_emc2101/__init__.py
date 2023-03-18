@@ -189,9 +189,9 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
             raise RuntimeError("No EMC2101 (part={}.{})".format(part, mfg))
 
         self._full_speed_lsb = None  # See _calculate_full_speed().
-        self.initialize()
+        self.emec2101_initialize()
 
-    def initialize(self):
+    def emec2101_initialize(self):
         """Reset the controller to an initial default configuration"""
         self._tach_mode_enable = True
         self._enabled_forced_temp = False
@@ -214,6 +214,15 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         """
         return self._config
 
+    def _get_internal_temperature(self):
+        """The temperature as measured by the EMC2101's internal 8-bit
+        temperature sensor, which validly ranges from 0 to 85 and does not
+        support fractions (unlike the external readings).
+
+        :return: int temperature in Celsius.
+        """
+        return self._int_temp
+
     @property
     def devstatus(self):
         """Read device status (alerts) register. See the STATUS_* bit
@@ -224,16 +233,11 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
 
     @property
     def internal_temperature(self):
-        """The temperature as measured by the EMC2101's internal 8-bit
-        temperature sensor, which validly ranges from 0 to 85 and does not
-        support fractions (unlike the external readings).
+        """internal temperature property"""
 
-        :return: int temperature in degrees centigrade.
-        """
         return self._int_temp
 
-    @property
-    def external_temperature(self):
+    def _get_external_temperature(self):
         """The temperature measured using the external diode. The value is
         read as a fixed-point 11-bit value ranging from -64 to approx 126,
         with fractional part of 1/8 degree.
@@ -259,16 +263,28 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         return full_tmp
 
     @property
-    def fan_speed(self):
+    def external_temperature(self):
+        """External temperature Property"""
+
+        return self._get_external_temperature()
+
+    def _get_fan_speed(self):
         """The current speed in Revolutions per Minute (RPM).
 
         :return: float fan speed rounded to 2dp.
+
         """
         val = self._tach_read_lsb
         val |= self._tach_read_msb << 8
         if val < 1:
             raise OSError("Connection")
         return round(emc2101_regs.FAN_RPM_DIVISOR / val, 2)
+
+    @property
+    def fan_speed(self):
+        """fan speed property"""
+
+        return self._get_fan_speed()
 
     def _calculate_full_speed(self, pwm_f=None, dac=None):
         """Determine the LSB value for a 100% fan setting"""
