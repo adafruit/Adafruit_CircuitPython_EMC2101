@@ -42,7 +42,9 @@ class CV:
     """struct helper"""
 
     @classmethod
-    def add_values(cls, value_tuples: Iterable[Tuple[str, int, str, Optional[float]]]) -> None:
+    def add_values(
+        cls, value_tuples: Iterable[Tuple[str, int, str, Optional[float]]]
+    ) -> None:
         """Creates CV entries"""
         cls.string = {}
         cls.lsb = {}
