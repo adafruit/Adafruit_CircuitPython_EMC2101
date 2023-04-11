@@ -118,7 +118,7 @@ class FanSpeedLUT:
         self._defer_update = False
         self._update_lut()
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int):
         if not isinstance(index, int):
             raise IndexError
         if not index in self.lut_values:

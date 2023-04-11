@@ -32,12 +32,17 @@ Implementation Notes
 
 """
 
+try:
+    from typing import Iterable, Optional, Tuple
+except ImportError:
+    pass
+
 
 class CV:
     """struct helper"""
 
     @classmethod
-    def add_values(cls, value_tuples):
+    def add_values(cls, value_tuples: Iterable[Tuple[str, int, str, Optional[float]]]) -> None:
         """Creates CV entries"""
         cls.string = {}
         cls.lsb = {}
@@ -48,7 +53,7 @@ class CV:
             cls.lsb[value] = lsb
 
     @classmethod
-    def is_valid(cls, value):
+    def is_valid(cls, value: int) -> bool:
         "Returns true if the given value is a member of the CV"
         return value in cls.string
 
