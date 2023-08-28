@@ -443,7 +443,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         # Not importing at top level so the SpinupDrive is not loaded
         # unless it is required, and thus 1KB bytecode can be avoided.
         # pylint: disable=import-outside-toplevel
-        from emc2101_enums import SpinupDrive
+        from .emc2101_enums import SpinupDrive
 
         if not SpinupDrive.is_valid(spin_drive):
             raise TypeError("spinup_drive must be a SpinupDrive")
