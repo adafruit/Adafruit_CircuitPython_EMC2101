@@ -410,7 +410,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         # Not importing at top level so the SpinupTime is not loaded
         # unless it is required, and thus 1KB bytecode can be avoided.
         # pylint: disable=import-outside-toplevel
-        from emc2101_enums import SpinupTime
+        from .emc2101_enums import SpinupTime
 
         if not SpinupTime.is_valid(spin_time):
             raise TypeError("spinup_time must be a SpinupTime")
@@ -473,7 +473,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         # Not importing at top level so the ConversionRate is not loaded
         # unless it is required, and thus 1KB bytecode can be avoided.
         # pylint: disable=import-outside-toplevel
-        from emc2101_enums import ConversionRate
+        from .emc2101_enums import ConversionRate
 
         if not ConversionRate.is_valid(rate):
             raise ValueError("conversion_rate must be a `ConversionRate`")
