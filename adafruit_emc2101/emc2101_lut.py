@@ -41,6 +41,12 @@ from adafruit_emc2101 import emc2101_regs
 from adafruit_emc2101.emc2101_fanspeed import FanSpeedLUT
 from adafruit_emc2101.emc2101_ext import EMC2101_EXT
 
+try:
+    import typing  # pylint: disable=unused-import
+    from busio import I2C
+except ImportError:
+    pass
+
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 
@@ -63,13 +69,13 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
     the lower entry's threshold, minus the hysteresis value.
     """
 
-    def __init__(self, i2c_bus):
+    def __init__(self, i2c_bus: I2C) -> None:
         super().__init__(i2c_bus)
 
         self.initialize()
         self._lut = FanSpeedLUT(self)
 
-    def initialize(self):
+    def initialize(self) -> None:
         """Reset the controller to an initial default configuration.
 
         :raises RuntimeError: if auto_check_status and an alert status bit is set
@@ -80,7 +86,7 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
         super().initialize()
         self._check_status()
 
-    def set_pwm_clock(self, use_preset=False, use_slow=False):
+    def set_pwm_clock(self, use_preset: bool = False, use_slow: bool = False) -> None:
         """
         Select the PWM clock source, choosing between two preset clocks or by
         configuring the clock with `pwm_frequency` and `pwm_frequency_divisor`.
@@ -110,13 +116,13 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
         self._check_status()
 
     @property
-    def pwm_frequency(self):
+    def pwm_frequency(self) -> int:
         """Selects the base clock frequency used for the fan PWM output"""
         self._check_status()
         return self._pwm_freq
 
     @pwm_frequency.setter
-    def pwm_frequency(self, value):
+    def pwm_frequency(self, value: int) -> None:
         """Set the PWM (fan) output frequency, which is a value from the
         datasheet.
 
@@ -131,7 +137,7 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
         self._check_status()
 
     @property
-    def pwm_frequency_divisor(self):
+    def pwm_frequency_divisor(self) -> int:
         """The Divisor applied to the PWM frequency to set the final frequency.
 
         :raises RuntimeError: if auto_check_status and an alert status bit is set
@@ -140,7 +146,7 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
         return self._pwm_freq_div
 
     @pwm_frequency_divisor.setter
-    def pwm_frequency_divisor(self, divisor):
+    def pwm_frequency_divisor(self, divisor: int) -> None:
         """Set the PWM (fan) output frequency divisor, which is a value from
         the datasheet.
 
@@ -154,7 +160,7 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
         self._check_status()
 
     @property
-    def lut_enabled(self):
+    def lut_enabled(self) -> bool:
         """Enable or disable the internal look up table used to map a given
         temperature to a fan speed. When the LUT is disabled fan speed can be
         changed with `manual_fan_speed`.
@@ -164,7 +170,7 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
         return not self._fan_lut_prog
 
     @lut_enabled.setter
-    def lut_enabled(self, enable_lut):
+    def lut_enabled(self, enable_lut: bool) -> None:
         """Enable or disable the internal look up table used to map a given
         temperature to a fan speed. When the LUT is disabled fan speed can be
         changed with `manual_fan_speed`.

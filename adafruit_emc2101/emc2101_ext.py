@@ -42,6 +42,12 @@ from adafruit_register.i2c_bits import RWBits
 from adafruit_emc2101 import emc2101_regs
 from adafruit_emc2101 import EMC2101
 
+try:
+    import typing  # pylint: disable=unused-import
+    from busio import I2C
+except ImportError:
+    pass
+
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 
@@ -137,22 +143,22 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
     uses down but useful to catch limit or overtemp alerts. checks can also
     be made by calling check_status(). Default: ON"""
 
-    def __init__(self, i2c_bus):
+    def __init__(self, i2c_bus: I2C) -> None:
         super().__init__(i2c_bus)
         self.initialize()
 
-    def initialize(self):
+    def initialize(self) -> None:
         """Reset the controller to an initial default configuration."""
         self.auto_check_status = False
         self._last_status = 0
         super().initialize()
 
-    def _check_status(self):
+    def _check_status(self) -> None:
         if self.auto_check_status:
             self.check_status()
 
     @property
-    def last_status(self):
+    def last_status(self) -> int:
         """Read the saved copy of the device status register. This is kept
         because the action of reading the status register also clears any
         outstanding alert reports, so a second read will return 0 unless
@@ -166,7 +172,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
 
     # Overrides plain version, class EMC2101 doesn't store last status.
     @property
-    def devstatus(self):
+    def devstatus(self) -> int:
         """Read device status (alerts) register. See the STATUS_* bit
         definitions in the emc2101_regs module, or refer to the datasheet for
         more detail.
@@ -178,7 +184,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         self._last_status = self._status
         return self._last_status
 
-    def check_status(self):
+    def check_status(self) -> None:
         """Read the status register and check for a fault indicated.
         If one of the bits in STATUS_ALERT indicates an alert, raise
         an exception.
@@ -194,7 +200,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
             raise RuntimeError("Status alert")
 
     @property
-    def internal_temperature(self):
+    def internal_temperature(self) -> int:
         """The temperature as measured by the EMC2101's internal 8-bit
         temperature sensor.
 
@@ -204,7 +210,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         return super().internal_temperature
 
     @property
-    def external_temperature(self):
+    def external_temperature(self) -> float:
         """The temperature measured using the external diode. The value is
         read as a fixed-point 11-bit value ranging from -64 C to just over
         approx 126 C, with fractional part of 1/8 degree centigrade.
@@ -221,7 +227,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         return super().external_temperature
 
     @property
-    def fan_speed(self):
+    def fan_speed(self) -> float:
         """The current speed in Revolutions per Minute (RPM).
 
         :return: float speed in RPM.
@@ -230,7 +236,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         return super().fan_speed
 
     @property
-    def dev_temp_critical_limit(self):
+    def dev_temp_critical_limit(self) -> int:
         """The critical temperature limit for the device (measured by internal
         sensor), in degrees centigrade.
 
@@ -246,7 +252,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         return self._tcrit_limit
 
     @property
-    def dev_temp_critical_hysteresis(self):
+    def dev_temp_critical_hysteresis(self) -> int:
         """The critical temperature hysteresis for the device (measured by
         the internal sensor), in degrees centigrade.
 
@@ -257,18 +263,16 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         number of degrees centigrade of this difference. The device does not to
         support setting this value to 0.
 
-        :param float temp: the new limit temperature
-        :raises ValueError: if the supplied temperature is out of range.
         """
         self._check_status()
         return self._tcrit_hyst
 
     @dev_temp_critical_hysteresis.setter
-    def dev_temp_critical_hysteresis(self, hysteresis):
+    def dev_temp_critical_hysteresis(self, hysteresis: int) -> None:
         """The critical temperature hysteresis for the device (measured by the
         internal sensor), in degrees centigrade (1..10).
 
-        :param float temp: the new critical limit temperature
+        :param int hysteresis: the number of degrees centigrade of difference
         """
         if not 0 <= hysteresis <= 10:
             raise ValueError("dev_temp_critical_hysteresis must be from 1..10")
@@ -276,14 +280,14 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         self._check_status()
 
     @property
-    def dev_temp_high_limit(self):
+    def dev_temp_high_limit(self) -> int:
         """The high limit temperature for the internal sensor, in degrees
         centigrade."""
         self._check_status()
         return self._int_temp_limit
 
     @dev_temp_high_limit.setter
-    def dev_temp_high_limit(self, temp):
+    def dev_temp_high_limit(self, temp: int) -> None:
         """The high limit temperature for the internal sensor, in degrees
         centigrade (0..85)."""
         # Device specced from 0C to 85C
@@ -293,7 +297,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         self._check_status()
 
     @property
-    def external_temp_low_limit(self):
+    def external_temp_low_limit(self) -> float:
         """The low limit temperature for the external sensor."""
         self._check_status()
         # No ordering restrictions here.
@@ -308,7 +312,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         return temp
 
     @external_temp_low_limit.setter
-    def external_temp_low_limit(self, temp: float):
+    def external_temp_low_limit(self, temp: float) -> None:
         """Set the low limit temperature for the external sensor. The device
         automatically compares live temp readings with this value and signal
         the current reading is too low by setting the status register.
@@ -338,7 +342,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         self._check_status()
 
     @property
-    def external_temp_high_limit(self):
+    def external_temp_high_limit(self) -> float:
         """The high limit temperature for the external sensor."""
         self._check_status()
 
@@ -355,7 +359,7 @@ class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
         return full_tmp
 
     @external_temp_high_limit.setter
-    def external_temp_high_limit(self, temp: float):
+    def external_temp_high_limit(self, temp: float) -> None:
         """Set high limit temperature for the external sensor. The device
         automatically compares live temp readings with this value and signal
         the current reading is too high by setting the status register.
