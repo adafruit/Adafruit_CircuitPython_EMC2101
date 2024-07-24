@@ -9,7 +9,7 @@
 Brushless fan controller: extended functionality
 
 
-* Author(s): Bryan Siepert, Ryan Pavlik
+* Author(s): Bryan Siepert, Rylie Pavlik
 
 Implementation Notes
 --------------------
