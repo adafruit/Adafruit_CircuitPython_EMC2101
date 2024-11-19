@@ -29,6 +29,8 @@ Implementation Notes
 * Adafruit's Register library:
   https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
+from types import TracebackType
+from typing import Optional, Type
 
 from adafruit_register.i2c_struct_array import StructArray
 
@@ -111,21 +113,26 @@ class FanSpeedLUT:
         return self
 
     # 'with' wrapper
-    def __exit__(self, typ, val, tbk):
+    def __exit__(
+        self,
+        typ: Optional[Type[BaseException]],
+        val: Optional[BaseException],
+        tbk: Optional[TracebackType],
+    ):
         """'with' wrapper: defer lut update until end of 'with' so
         update_lut work can be done just once at the end of setting the LUT.
         """
         self._defer_update = False
         self._update_lut()
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int) -> int:
         if not isinstance(index, int):
             raise IndexError
         if not index in self.lut_values:
             raise IndexError
         return self.lut_values[index]
 
-    def __setitem__(self, index, value):
+    def __setitem__(self, index: int, value: int) -> None:
         if not isinstance(index, int):
             raise IndexError
         if value is None:
@@ -140,12 +147,12 @@ class FanSpeedLUT:
         if not self._defer_update:
             self._update_lut()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """return the official string representation of the LUT"""
         # pylint: disable=consider-using-f-string
         return "FanSpeedLUT {:x}".format(id(self))
 
-    def __str__(self):
+    def __str__(self) -> str:
         """return the official string representation of the LUT"""
         value_strs = []
         lut_keys = tuple(sorted(self.lut_values.keys()))
@@ -157,7 +164,7 @@ class FanSpeedLUT:
         return "\n".join(value_strs)
 
     @property
-    def lookup_table(self):
+    def lookup_table(self) -> dict:
         """Return a dictionary of LUT values."""
         lut_keys = tuple(sorted(self.lut_values.keys()))
         values = {}
@@ -166,14 +173,14 @@ class FanSpeedLUT:
             values[temp] = fan_drive
         return values
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.lut_values)
 
     # this function does a whole lot of work to organized the user-supplied lut dict into
     # their correct spot within the lut table as pairs of set registers, sorted with the lowest
     # temperature first
 
-    def _update_lut(self):
+    def _update_lut(self) -> None:
         # Make sure we're not going to try to set more entries than we have slots
         if len(self.lut_values) > 8:
             raise ValueError("LUT can only contain a maximum of 8 items")
@@ -199,14 +206,14 @@ class FanSpeedLUT:
             )
         self.emc_fan.lut_enabled = current_mode
 
-    def _set_lut_entry(self, idx, temp, speed):
+    def _set_lut_entry(self, idx: int, temp: int, speed: int) -> None:
         """Internal function: add a value to the local LUT as a byte array,
         suitable for block transfer to the EMC I2C interface.
         """
         self._fan_lut[idx * 2] = bytearray((temp,))
         self._fan_lut[idx * 2 + 1] = bytearray((speed,))
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear all LUT entries."""
         self.lut_values = {}
         self._update_lut()
