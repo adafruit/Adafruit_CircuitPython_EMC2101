@@ -39,6 +39,12 @@ import adafruit_bus_device.i2c_device as i2cdevice
 
 from adafruit_emc2101 import emc2101_regs
 
+try:
+    from typing import Tuple
+    from busio import I2C
+except ImportError:
+    pass
+
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 
@@ -175,7 +181,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
     """Set whether spin-up is aborted if measured speed is lower than the limit.
     Ignored unless _tach_mode_enable is 1."""
 
-    def __init__(self, i2c_bus):
+    def __init__(self, i2c_bus: I2C) -> None:
         # These devices don't ship with any other address.
         self.i2c_device = i2cdevice.I2CDevice(i2c_bus, emc2101_regs.I2C_ADDR)
         part = self._part_id
@@ -186,12 +192,12 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
             not part in [emc2101_regs.PART_ID_EMC2101, emc2101_regs.PART_ID_EMC2101R]
             or mfg != emc2101_regs.MFG_ID_SMSC
         ):
-            raise RuntimeError("No EMC2101 (part={}.{})".format(part, mfg))
+            raise RuntimeError(f"No EMC2101 (part={part}.{mfg})")
 
         self._full_speed_lsb = None  # See _calculate_full_speed().
         self.initialize()
 
-    def initialize(self):
+    def initialize(self) -> None:
         """Reset the controller to an initial default configuration"""
         self._tach_mode_enable = True
         self._enabled_forced_temp = False
@@ -199,14 +205,14 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._calculate_full_speed()
 
     @property
-    def part_info(self):
+    def part_info(self) -> Tuple[int, int, int]:
         """The part information: manufacturer, part id and revision.
         Normally returns (0x5d, 0x16, 0x1).
         """
         return (self._mfg_id, self._part_id, self._part_rev)
 
     @property
-    def devconfig(self):
+    def devconfig(self) -> int:
         """Read the main device config register.
         See the CONFIG_* bit definitions in the emc2101_regs module, or refer
         to the datasheet for more detail. Note: this is not the Fan Config
@@ -215,7 +221,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         return self._config
 
     @property
-    def devstatus(self):
+    def devstatus(self) -> int:
         """Read device status (alerts) register. See the STATUS_* bit
         definitions in the emc2101_regs module, or refer to the datasheet for
         more detail.
@@ -223,7 +229,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         return self._status
 
     @property
-    def internal_temperature(self):
+    def internal_temperature(self) -> int:
         """The temperature as measured by the EMC2101's internal 8-bit
         temperature sensor, which validly ranges from 0 to 85 and does not
         support fractions (unlike the external readings).
@@ -233,7 +239,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         return self._int_temp
 
     @property
-    def external_temperature(self):
+    def external_temperature(self) -> float:
         """The temperature measured using the external diode. The value is
         read as a fixed-point 11-bit value ranging from -64 to approx 126,
         with fractional part of 1/8 degree.
@@ -259,7 +265,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         return full_tmp
 
     @property
-    def fan_speed(self):
+    def fan_speed(self) -> float:
         """The current speed in Revolutions per Minute (RPM).
 
         :return: float fan speed rounded to 2dp.
@@ -270,7 +276,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
             raise OSError("Connection")
         return round(emc2101_regs.FAN_RPM_DIVISOR / val, 2)
 
-    def _calculate_full_speed(self, pwm_f=None, dac=None):
+    def _calculate_full_speed(self, pwm_f: int = None, dac: int = None) -> None:
         """Determine the LSB value for a 100% fan setting"""
         if dac is None:
             dac = self.dac_output_enabled
@@ -287,12 +293,12 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         # PWM_F=0 behaves like PWM_F=1.
         self._full_speed_lsb = 2.0 * max(1, pwm_f)
 
-    def _speed_to_lsb(self, percentage):
+    def _speed_to_lsb(self, percentage: int) -> int:
         """Convert a fan speed percentage to a Fan Setting byte value"""
         return round((percentage / 100.0) * self._full_speed_lsb)
 
     @property
-    def manual_fan_speed(self):
+    def manual_fan_speed(self) -> float:
         """The fan speed used while the LUT is being updated and is unavailable. The
         speed is given as the fan's PWM duty cycle represented as a float percentage.
         The value roughly approximates the percentage of the fan's maximum speed.
@@ -304,7 +310,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         return (raw_setting / fan_speed) * 100.0
 
     @manual_fan_speed.setter
-    def manual_fan_speed(self, fan_speed):
+    def manual_fan_speed(self, fan_speed: float) -> None:
         """The fan speed used while the LUT is being updated and is unavailable. The
         speed is given as the fan's PWM duty cycle represented as a float percentage.
         The value roughly approximates the percentage of the fan's maximum speed.
@@ -324,13 +330,13 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._fan_lut_prog = lut_disabled
 
     @property
-    def dac_output_enabled(self):
+    def dac_output_enabled(self) -> int:
         """When set, the fan control signal is output as a DC voltage instead
         of a PWM signal."""
         return self._dac_output_enabled
 
     @dac_output_enabled.setter
-    def dac_output_enabled(self, value):
+    def dac_output_enabled(self, value: int) -> None:
         """When set, the fan control signal is output as a DC voltage instead of
         a PWM signal.  Be aware that the DAC output very likely requires different
         hardware to the PWM output.  See datasheet and examples for info.
@@ -339,7 +345,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._calculate_full_speed(dac=value)
 
     @property
-    def lut_enabled(self):
+    def lut_enabled(self) -> bool:
         """Enable or disable the internal look up table used to map a given
         temperature to a fan speed.
 
@@ -350,7 +356,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         return not self._fan_lut_prog
 
     @property
-    def tach_limit(self):
+    def tach_limit(self) -> float:
         """The maximum speed expected for the fan. If the fan exceeds this
         speed, the status register TACH bit will be set.
 
@@ -365,7 +371,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         return round(emc2101_regs.FAN_RPM_DIVISOR / limit, 2)
 
     @tach_limit.setter
-    def tach_limit(self, new_limit):
+    def tach_limit(self, new_limit: float) -> None:
         """Set the speed limiter on the fan PWM signal. The value of
         15000 is arbitrary, but very few fans run faster than this. If the
         fan exceeds this speed, the status register TACH bit will be set.
@@ -384,7 +390,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._tach_limit_msb = (num >> 8) & 0xFF
 
     @property
-    def spinup_time(self):
+    def spinup_time(self) -> int:
         """The amount of time the fan will spin at the currently set drive
         strength.
 
@@ -393,7 +399,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         return self._spin_time
 
     @spinup_time.setter
-    def spinup_time(self, spin_time):
+    def spinup_time(self, spin_time: int) -> None:
         """Set the time that the SpinupDrive value will be used to get the
         fan moving before the normal speed controls are activated. This is
         needed because fan motors typically need a 'kick' to get them moving,
@@ -417,7 +423,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._spin_time = spin_time
 
     @property
-    def spinup_drive(self):
+    def spinup_drive(self) -> int:
         """The drive strength of the fan on spinup in % max PWM duty cycle
         (which approximates to max fan speed).
 
@@ -426,7 +432,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         return self._spin_drive
 
     @spinup_drive.setter
-    def spinup_drive(self, spin_drive):
+    def spinup_drive(self, spin_drive: int) -> None:
         """Set the drive (pwm duty percentage) that the SpinupTime value is applied
         to move the fan before the normal speed controls are activated. This is needed
         because fan motors typically need a 'kick' to get them moving, but after this
@@ -450,16 +456,16 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         self._spin_drive = spin_drive
 
     @property
-    def conversion_rate(self):
+    def conversion_rate(self) -> int:
         """The rate at which temperature measurements are taken.
 
         :return int: corresponding to the ConversionRate enumeration."""
         return self._conversion_rate
 
     @conversion_rate.setter
-    def conversion_rate(self, rate):
+    def conversion_rate(self, rate: int) -> None:
         """Set the rate at which the external temperature is checked by
-        by the device. Reducing this rate can reduce power consumption.
+        the device. Reducing this rate can reduce power consumption.
 
         Usage:
 
