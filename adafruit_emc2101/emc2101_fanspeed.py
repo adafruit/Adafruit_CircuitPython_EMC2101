@@ -29,6 +29,7 @@ Implementation Notes
 * Adafruit's Register library:
   https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
+
 from types import TracebackType
 from typing import Optional, Type
 
@@ -149,8 +150,7 @@ class FanSpeedLUT:
 
     def __repr__(self) -> str:
         """return the official string representation of the LUT"""
-        # pylint: disable=consider-using-f-string
-        return "FanSpeedLUT {:x}".format(id(self))
+        return f"FanSpeedLUT {id(self):x}"
 
     def __str__(self) -> str:
         """return the official string representation of the LUT"""
@@ -158,7 +158,6 @@ class FanSpeedLUT:
         lut_keys = tuple(sorted(self.lut_values.keys()))
         for temp in lut_keys:
             fan_drive = self.lut_values[temp]
-            # pylint: disable=consider-using-f-string
             value_strs.append("%d deg C => %.1f%% duty cycle" % (temp, fan_drive))
 
         return "\n".join(value_strs)
@@ -195,15 +194,12 @@ class FanSpeedLUT:
         # get and sort the new lut keys so that we can assign them in order
         for idx, current_temp in enumerate(sorted(self.lut_values.keys())):
             # We don't want to make `_speed_to_lsb()` public, it is only needed here.
-            # pylint: disable=protected-access
             current_speed = self.emc_fan._speed_to_lsb(self.lut_values[current_temp])
             self._set_lut_entry(idx, current_temp, current_speed)
 
         # Set the remaining LUT entries to the default (Temp/Speed = max value)
         for idx in range(len(self.lut_values), 8):
-            self._set_lut_entry(
-                idx, emc2101_regs.MAX_LUT_TEMP, emc2101_regs.MAX_LUT_SPEED
-            )
+            self._set_lut_entry(idx, emc2101_regs.MAX_LUT_TEMP, emc2101_regs.MAX_LUT_SPEED)
         self.emc_fan.lut_enabled = current_mode
 
     def _set_lut_entry(self, idx: int, temp: int, speed: int) -> None:

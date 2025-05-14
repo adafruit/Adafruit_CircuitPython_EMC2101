@@ -31,16 +31,17 @@ Implementation Notes
 
 """
 
-from micropython import const
-from adafruit_register.i2c_struct import ROUnaryStruct, UnaryStruct
+import adafruit_bus_device.i2c_device as i2cdevice
 from adafruit_register.i2c_bit import RWBit
 from adafruit_register.i2c_bits import RWBits
-import adafruit_bus_device.i2c_device as i2cdevice
+from adafruit_register.i2c_struct import ROUnaryStruct, UnaryStruct
+from micropython import const
 
 from adafruit_emc2101 import emc2101_regs
 
 try:
     from typing import Tuple
+
     from busio import I2C
 except ImportError:
     pass
@@ -49,7 +50,7 @@ __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 
 
-class EMC2101:  # pylint: disable=too-many-instance-attributes
+class EMC2101:
     """Basic driver for the EMC2101 Fan Controller.
 
     :param ~busio.I2C i2c_bus: The I2C bus the EMC is connected to.
@@ -189,7 +190,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         # print("EMC2101 (part={}.{})".format(part, mfg))
 
         if (
-            not part in [emc2101_regs.PART_ID_EMC2101, emc2101_regs.PART_ID_EMC2101R]
+            part not in {emc2101_regs.PART_ID_EMC2101, emc2101_regs.PART_ID_EMC2101R}
             or mfg != emc2101_regs.MFG_ID_SMSC
         ):
             raise RuntimeError(f"No EMC2101 (part={part}.{mfg})")
@@ -415,8 +416,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         """
         # Not importing at top level so the SpinupTime is not loaded
         # unless it is required, and thus 1KB bytecode can be avoided.
-        # pylint: disable=import-outside-toplevel
-        from adafruit_emc2101.emc2101_enums import SpinupTime
+        from adafruit_emc2101.emc2101_enums import SpinupTime  # noqa: PLC0415
 
         if not SpinupTime.is_valid(spin_time):
             raise TypeError("spinup_time must be a SpinupTime")
@@ -448,8 +448,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         """
         # Not importing at top level so the SpinupDrive is not loaded
         # unless it is required, and thus 1KB bytecode can be avoided.
-        # pylint: disable=import-outside-toplevel
-        from adafruit_emc2101.emc2101_enums import SpinupDrive
+        from adafruit_emc2101.emc2101_enums import SpinupDrive  # noqa: PLC0415
 
         if not SpinupDrive.is_valid(spin_drive):
             raise TypeError("spinup_drive must be a SpinupDrive")
@@ -478,8 +477,7 @@ class EMC2101:  # pylint: disable=too-many-instance-attributes
         """
         # Not importing at top level so the ConversionRate is not loaded
         # unless it is required, and thus 1KB bytecode can be avoided.
-        # pylint: disable=import-outside-toplevel
-        from adafruit_emc2101.emc2101_enums import ConversionRate
+        from adafruit_emc2101.emc2101_enums import ConversionRate  # noqa: PLC0415
 
         if not ConversionRate.is_valid(rate):
             raise ValueError("conversion_rate must be a `ConversionRate`")

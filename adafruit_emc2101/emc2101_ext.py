@@ -35,15 +35,15 @@ if your device has enough RAM to support it. This class adds LUT control
 and PWM frequency control to the base feature set.
 """
 
-from adafruit_register.i2c_struct import UnaryStruct
 from adafruit_register.i2c_bit import RWBit
 from adafruit_register.i2c_bits import RWBits
+from adafruit_register.i2c_struct import UnaryStruct
 
-from adafruit_emc2101 import emc2101_regs
-from adafruit_emc2101 import EMC2101
+from adafruit_emc2101 import EMC2101, emc2101_regs
 
 try:
-    import typing  # pylint: disable=unused-import
+    import typing
+
     from busio import I2C
 except ImportError:
     pass
@@ -52,7 +52,7 @@ __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 
 
-class EMC2101_EXT(EMC2101):  # pylint: disable=too-many-instance-attributes
+class EMC2101_EXT(EMC2101):
     """Driver for EMC2101 Fan, adding definitions for all (but LUT) device registers.
 
     See :class:`adafruit_emc2101.EMC2101` for the base/common functionality.
