@@ -2,7 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 import time
+
 import board
+
 from adafruit_emc2101 import EMC2101
 
 i2c = board.I2C()  # uses board.SCL and board.SDA

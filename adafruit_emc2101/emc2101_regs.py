@@ -54,12 +54,7 @@ STATUS_TCRIT = const(0x02)
 STATUS_TACH = const(0x01)
 
 STATUS_ALERT = (
-    STATUS_TACH
-    | STATUS_TCRIT
-    | STATUS_FAULT
-    | STATUS_EXTLOW
-    | STATUS_EXTHIGH
-    | STATUS_INTHIGH
+    STATUS_TACH | STATUS_TCRIT | STATUS_FAULT | STATUS_EXTLOW | STATUS_EXTHIGH | STATUS_INTHIGH
 )
 
 # Bits in device configuration register for masks etc.

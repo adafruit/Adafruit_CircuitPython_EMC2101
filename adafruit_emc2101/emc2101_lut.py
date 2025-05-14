@@ -38,11 +38,12 @@ and PWM frequency control to the base feature set.
 from adafruit_register.i2c_struct import UnaryStruct
 
 from adafruit_emc2101 import emc2101_regs
-from adafruit_emc2101.emc2101_fanspeed import FanSpeedLUT
 from adafruit_emc2101.emc2101_ext import EMC2101_EXT
+from adafruit_emc2101.emc2101_fanspeed import FanSpeedLUT
 
 try:
-    import typing  # pylint: disable=unused-import
+    import typing
+
     from busio import I2C
 except ImportError:
     pass
@@ -51,7 +52,7 @@ __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
 
 
-class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
+class EMC2101_LUT(EMC2101_EXT):
     """Driver for the EMC2101 Fan Controller, with PWM frequency and temperature
     look-up-table (LUT) control.
 
@@ -81,7 +82,6 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
         :raises RuntimeError: if auto_check_status and an alert status bit is set
         """
         self.lut_enabled = True
-        # pylint: disable=attribute-defined-outside-init
         self._fan_clk_ovr = True
         super().initialize()
         self._check_status()
@@ -109,9 +109,7 @@ class EMC2101_LUT(EMC2101_EXT):  # pylint: disable=too-many-instance-attributes
         if not isinstance(use_slow, bool):
             raise TypeError("use_slow_pwm must be given a bool")
 
-        # pylint: disable=attribute-defined-outside-init
         self._fan_clk_ovr = not use_preset
-        # pylint: disable=attribute-defined-outside-init
         self._fan_clk_sel = use_slow
         self._check_status()
 
