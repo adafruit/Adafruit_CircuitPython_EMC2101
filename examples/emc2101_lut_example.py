@@ -22,13 +22,13 @@ emc.forced_temp_enabled = True
 print("Lut:", emc.lut)
 emc.forced_ext_temp = 28  # over 25, should be 25%
 time.sleep(3)
-print("25%% duty cycle is %f RPM:" % emc.fan_speed)
+print(f"25% duty cycle is {emc.fan_speed:f} RPM:")
 
 
 emc.forced_ext_temp = 35  # over 30, should be 50%
 time.sleep(3)
-print("50%% duty cycle is %f RPM:" % emc.fan_speed)
+print(f"50% duty cycle is {emc.fan_speed:f} RPM:")
 
 emc.forced_ext_temp = 43  # over 42, should be 75%
 time.sleep(3)
-print("75%% duty cycle is %f RPM:" % emc.fan_speed)
+print(f"75% duty cycle is {emc.fan_speed:f} RPM:")

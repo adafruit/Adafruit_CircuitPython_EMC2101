@@ -158,7 +158,7 @@ class FanSpeedLUT:
         lut_keys = tuple(sorted(self.lut_values.keys()))
         for temp in lut_keys:
             fan_drive = self.lut_values[temp]
-            value_strs.append("%d deg C => %.1f%% duty cycle" % (temp, fan_drive))
+            value_strs.append(f"{temp:d} deg C => {fan_drive:.1f}% duty cycle")
 
         return "\n".join(value_strs)
 

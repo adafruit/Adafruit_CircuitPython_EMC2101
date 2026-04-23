@@ -332,7 +332,7 @@ class EMC2101_EXT(EMC2101):
         temp = int(temp)
         # Mask 3 bits & shift to bits 5,6,7 in byte
         temp_lsb = temp & 0x07
-        temp_lsb = temp_lsb << 5
+        temp_lsb <<= 5
         # Now drop 3 fraction bits.
         temp_msb = temp >> 3
 
@@ -380,7 +380,7 @@ class EMC2101_EXT(EMC2101):
         temp = int(temp)
         # Mask 3 bits & shift to bits 5,6,7 in byte
         temp_lsb = temp & 0x07
-        temp_lsb = temp_lsb << 5
+        temp_lsb <<= 5
         # Now drop 3 fraction bits.
         temp_msb = temp >> 3
         # No ordering restrictions here.
