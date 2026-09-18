@@ -30,12 +30,15 @@ Implementation Notes
   https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
 
-from types import TracebackType
-from typing import Optional, Type
-
 from adafruit_register.i2c_struct_array import StructArray
 
 from adafruit_emc2101 import emc2101_regs
+
+try:
+    from types import TracebackType
+    from typing import Optional, Type
+except ImportError:
+    pass
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_EMC2101.git"
